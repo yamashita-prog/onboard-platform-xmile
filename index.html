@@ -960,6 +960,58 @@ function completeMission(id){
 
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
+// ═══════════ GOOGLE OAUTH ═══════════
+const GCAL_CLIENT_ID = '50754780423-m7vtedgacl7i7qrt4mg8o9v7t9112e2j.apps.googleusercontent.com';
+const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar';
+let gcalAccessToken = null;
+let googleAuthLoaded = false;
+
+function loadGoogleAuth() {
+  if(googleAuthLoaded) return;
+  googleAuthLoaded = true;
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = () => console.log('Google Identity Services loaded');
+  document.head.appendChild(script);
+}
+
+function signInWithGoogle(callback) {
+  if(gcalAccessToken) { callback(gcalAccessToken); return; }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope: GCAL_SCOPES,
+    callback: (resp) => {
+      if(resp.access_token) {
+        gcalAccessToken = resp.access_token;
+        showToast('✅ Googleカレンダーと連携しました');
+        callback(gcalAccessToken);
+      }
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function getCalendarEvents(date, token) {
+  const timeMin = new Date(date); timeMin.setHours(0,0,0,0);
+  const timeMax = new Date(date); timeMax.setHours(23,59,59,0);
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await res.json();
+  return data.items || [];
+}
+
+async function createCalendarEvent(title, date, slot, dur, token) {
+  const [h,m] = slot.split(':').map(Number);
+  const start = new Date(date); start.setHours(h,m,0,0);
+  const end = new Date(start); end.setMinutes(end.getMinutes()+dur);
+  const body = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+  await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+
 // ═══════════ SCHEDULE BOOKING (Google Calendar連携) ═══════════
 // リクルーターのGoogleカレンダーから空き時間を取得してスロットを生成する
 let gcalSlots = {}; // { 'YYYY-MM-DD': [{time:'10:00', available:true}, ...] }
@@ -967,78 +1019,47 @@ let loadingSlots = false;
 
 async function fetchAvailability(recruiter, date) {
   const key = dk(date);
-  if (gcalSlots[key] !== undefined) return; // キャッシュ済み
+  if(gcalSlots[key] !== undefined) return;
   loadingSlots = true;
   renderSchedStep();
 
-  try {
-    const timeMin = new Date(date);
-    timeMin.setHours(9, 0, 0, 0);
-    const timeMax = new Date(date);
-    timeMax.setHours(18, 0, 0, 0);
+  const doFetch = async (token) => {
+    try {
+      const events = await getCalendarEvents(date, token);
+      const busyTimes = events.map(e => ({
+        start: new Date(e.start.dateTime||e.start.date),
+        end: new Date(e.end.dateTime||e.end.date)
+      }));
+      const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+      gcalSlots[key] = base.map(t => {
+        const [h,m] = t.split(':').map(Number);
+        const slotStart = new Date(date); slotStart.setHours(h,m,0,0);
+        const slotEnd = new Date(slotStart); slotEnd.setMinutes(slotEnd.getMinutes()+30);
+        const busy = busyTimes.some(b => slotStart < b.end && slotEnd > b.start);
+        return { time: t, available: !busy };
+      });
+    } catch(e) {
+      const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+      gcalSlots[key] = base.map(t => ({ time: t, available: true }));
+    }
+    loadingSlots = false;
+    renderSchedStep();
+  };
 
-    const prompt = `Google CalendarでユーザーのカレンダーIDはprimaryです。
-${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得してください。
-取得した予定をもとに、9:00〜17:00の間で30分刻みの時間枠のうち、予定が入っていない空き時間を特定してください。
-以下のJSON形式のみで返答してください（前置き・説明不要）:
-{"slots":[{"time":"09:00","available":true},{"time":"09:30","available":false},{"time":"10:00","available":true},...]}
-予定が取得できない場合は全スロットをavailable:trueとして返してください。`;
-
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await res.json();
-    const textBlock = data.content?.find(b => b.type === 'text');
-    const text = textBlock?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    gcalSlots[key] = parsed.slots;
-  } catch(e) {
-    // カレンダー取得失敗時はデフォルトスロットを表示
-    const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
-    gcalSlots[key] = base.map(t => ({ time: t, available: true }));
-  }
-  loadingSlots = false;
-  renderSchedStep();
+  signInWithGoogle(doFetch);
 }
 
 async function submitToCalendar(recruiter, date, slot, type) {
-  try {
-    const dows = ['日','月','火','水','木','金','土'];
-    const startDt = new Date(date);
-    const [h, m] = slot.split(':').map(Number);
-    startDt.setHours(h, m, 0, 0);
-    const endDt = new Date(startDt);
-    endDt.setMinutes(endDt.getMinutes() + (type.dur === '60分' ? 60 : type.dur === '45分' ? 45 : 30));
-
-    const prompt = `Google Calendarのプライマリカレンダーに以下の予定を追加してください：
-タイトル：「${type.name} - ${recruiter.name}」
-開始：${startDt.toISOString()}
-終了：${endDt.toISOString()}
-説明：内定者との面談（${type.name}）
-予定を作成したら「作成完了」とだけ答えてください。`;
-
-    await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-  } catch(e) {
-    console.log('Calendar registration failed (non-critical):', e);
-  }
+  const durMap = {'60分':60,'45分':45,'30分':30};
+  const dur = durMap[type.dur] || 30;
+  const title = `【面談】${type.name} - ${recruiter.name}`;
+  signInWithGoogle(async (token) => {
+    try {
+      await createCalendarEvent(title, date, slot, dur, token);
+    } catch(e) {
+      console.log('Calendar event creation failed:', e);
+    }
+  });
 }
 
 function renderSchedStep(){
@@ -1184,6 +1205,7 @@ function showToast(msg){
 
 // ═══════════ INIT ═══════════
 renderDashboard();
+loadGoogleAuth();
 </script>
 </body>
 </html>

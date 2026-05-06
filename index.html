@@ -321,6 +321,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="sidebar-label">メイン</div>
     <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">🏠</span><span class="nav-label">ダッシュボード</span></div>
     <div class="nav-item" onclick="nav('candidates',this)" id="nav-candidates"><span class="nav-icon">👥</span><span class="nav-label">内定者管理</span><span class="nav-badge">4</span></div>
+    <div class="nav-item" onclick="nav('team',this)" id="nav-team"><span class="nav-icon">🧑‍💼</span><span class="nav-label">担当者管理</span></div>
     <div class="nav-item" onclick="nav('news',this)"><span class="nav-icon">📰</span><span class="nav-label">週報・お知らせ</span><span class="nav-badge red">新</span></div>
   </div>
   <div class="sidebar-section">
@@ -486,7 +487,38 @@ tbody tr:hover td{background:var(--s2)}
 </div><!-- /main -->
 </div><!-- /body-wrap -->
 
-<!-- MODAL: 候補者詳細 -->
+<!-- ===== TEAM ===== -->
+<div class="page" id="page-team">
+  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div><div class="page-eyebrow">Team</div><div class="page-title">担当者管理</div><div class="page-sub">採用担当・リクルーターの追加・編集</div></div>
+    <button class="btn btn-primary" onclick="openAddTeam()">+ 担当者を追加</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>名前</th><th>役職</th><th>メールアドレス</th><th>操作</th></tr></thead>
+        <tbody id="team-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 担当者追加 -->
+<div class="modal-overlay" id="add-team-modal" onclick="closeAddTeamModal(event)">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="team-modal-title">担当者を追加</div><button class="modal-close" onclick="closeAddTeamModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field form-full"><label>名前</label><input id="at-name" placeholder="田村 さくら"></div>
+        <div class="field form-full"><label>役職</label><input id="at-role" placeholder="新卒採用担当"></div>
+        <div class="field form-full"><label>メールアドレス</label><input id="at-email" placeholder="sakura@xmile.co.jp" type="email"></div>
+        <div class="field form-full"><label>アイコン（絵文字）</label><input id="at-av" placeholder="👩" maxlength="2"></div>
+      </div>
+      <input type="hidden" id="at-edit-id">
+      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveTeamMember()">保存する</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="cand-modal" onclick="closeCandModal(event)">
   <div class="modal" id="cand-modal-body"></div>
 </div>
@@ -608,9 +640,9 @@ const schedTypes=[
   {id:'followup',icon:'📋',name:'課題フォローアップ',desc:'入社前ミッションの進捗を確認',dur:'30分'},
 ];
 const recruiters=[
-  {id:'tamura',av:'👩',name:'田村 さくら',role:'新卒採用担当',avail:'今週空きあり'},
-  {id:'sasaki',av:'👨',name:'佐々木 拓也',role:'インターンシップ担当',avail:'来週以降'},
-  {id:'yamaguchi',av:'🧑',name:'山口 恵',role:'人事・研修担当',avail:'今週空きあり'},
+  {id:'tamura',av:'👩',name:'田村 さくら',role:'新卒採用担当',email:'sakura@xmile.co.jp'},
+  {id:'sasaki',av:'👨',name:'佐々木 拓也',role:'インターンシップ担当',email:'takuya@xmile.co.jp'},
+  {id:'yamaguchi',av:'🧑',name:'山口 恵',role:'人事・研修担当',email:'megumi@xmile.co.jp'},
 ];
 const takenSlots={};
 const today=new Date();
@@ -630,6 +662,7 @@ function setMode(m){
   const navCands=document.getElementById('nav-candidates');
   if(isAdmin){
     navCands.style.display='flex';
+    document.getElementById('nav-team').style.display='flex';
     document.getElementById('topbar-name').textContent='田村 さくら（HR）';
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
@@ -640,6 +673,7 @@ function setMode(m){
     document.getElementById('dash-sub').textContent='2025年度 新卒内定者の入社準備状況';
   } else {
     navCands.style.display='none';
+    document.getElementById('nav-team').style.display='none';
     document.getElementById('topbar-name').textContent='田中 花子';
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
@@ -660,6 +694,7 @@ function nav(page,el){
   if(el) el.classList.add('active');
   if(page==='dashboard') renderDashboard();
   if(page==='candidates') renderCandidates();
+  if(page==='team') renderTeam();
   if(page==='news') renderNews();
   if(page==='missions') renderMissions();
   if(page==='schedule') renderSchedStep();
@@ -1190,6 +1225,79 @@ async function sBookSubmit(){
   showToast('📅 Googleカレンダーに登録しました');
 }
 function sBookReset(){Object.assign(sBook,{step:1,type:null,rec:null,date:null,slot:null});gcalSlots={};renderSchedStep()}
+
+// ═══════════ TEAM MANAGEMENT ═══════════
+function renderTeam(){
+  document.getElementById('team-table').innerHTML = recruiters.map(r=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">${r.av}</div>
+        <strong>${r.name}</strong>
+      </div></td>
+      <td style="color:var(--text2)">${r.role}</td>
+      <td style="color:var(--text2)">${r.email||'—'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="editTeamMember('${r.id}')">編集</button>
+          <button class="btn btn-sm" style="background:rgba(220,38,38,.08);color:var(--red);border:1px solid rgba(220,38,38,.15)" onclick="deleteTeamMember('${r.id}')">削除</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddTeam(){
+  document.getElementById('team-modal-title').textContent='担当者を追加';
+  document.getElementById('at-name').value='';
+  document.getElementById('at-role').value='';
+  document.getElementById('at-email').value='';
+  document.getElementById('at-av').value='👤';
+  document.getElementById('at-edit-id').value='';
+  document.getElementById('add-team-modal').classList.add('open');
+}
+
+function editTeamMember(id){
+  const r=recruiters.find(x=>x.id===id);
+  if(!r) return;
+  document.getElementById('team-modal-title').textContent='担当者を編集';
+  document.getElementById('at-name').value=r.name;
+  document.getElementById('at-role').value=r.role;
+  document.getElementById('at-email').value=r.email||'';
+  document.getElementById('at-av').value=r.av;
+  document.getElementById('at-edit-id').value=id;
+  document.getElementById('add-team-modal').classList.add('open');
+}
+
+function saveTeamMember(){
+  const name=document.getElementById('at-name').value.trim();
+  const role=document.getElementById('at-role').value.trim();
+  const email=document.getElementById('at-email').value.trim();
+  const av=document.getElementById('at-av').value.trim()||'👤';
+  const editId=document.getElementById('at-edit-id').value;
+  if(!name) return;
+  if(editId){
+    const r=recruiters.find(x=>x.id===editId);
+    if(r){r.name=name;r.role=role;r.email=email;r.av=av;}
+    showToast('✅ 担当者情報を更新しました');
+  } else {
+    recruiters.push({id:'r_'+Date.now(),av,name,role,email});
+    showToast('✅ 担当者を追加しました');
+  }
+  closeAddTeamModal();
+  renderTeam();
+}
+
+function deleteTeamMember(id){
+  if(!confirm('この担当者を削除しますか？')) return;
+  const idx=recruiters.findIndex(x=>x.id===id);
+  if(idx>-1) recruiters.splice(idx,1);
+  renderTeam();
+  showToast('🗑 担当者を削除しました');
+}
+
+function closeAddTeamModal(e){
+  if(!e||e.target===document.getElementById('add-team-modal'))
+    document.getElementById('add-team-modal').classList.remove('open');
+}
 
 // ═══════════ TIMELINE ═══════════
 function renderTimeline(){

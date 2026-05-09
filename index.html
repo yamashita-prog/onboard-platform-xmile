@@ -408,6 +408,10 @@ tbody tr:hover td{background:var(--s2)}
         <div style="padding:12px"><div class="sched-list" id="news-sched"></div></div>
       </div>
       <div class="card">
+        <div class="card-head"><h2>📢 最新プレスリリース</h2><a href="https://prtimes.jp/main/html/searchrlp/company_id/63503" target="_blank" class="btn btn-ghost btn-sm">PRtimesで見る</a></div>
+        <div style="padding:8px" id="press-release-list"><div style="padding:12px;font-size:13px;color:var(--text3)">読み込み中...</div></div>
+      </div>
+      <div class="card">
         <div class="card-head"><h2>❓ よくある質問</h2></div>
         <div style="padding:12px" id="faq-list"></div>
       </div>
@@ -735,7 +739,7 @@ function nav(page,el){
   if(page==='dashboard') renderDashboard();
   if(page==='candidates') renderCandidates();
   if(page==='team') renderTeam();
-  if(page==='news') renderNews();
+  if(page==='news') renderNews().catch(e=>console.warn(e));
   if(page==='missions') renderMissions();
   if(page==='schedule') renderSchedStep();
   if(page==='timeline') renderTimeline();
@@ -826,18 +830,56 @@ async function addCandidate(){
 }
 
 // ═══════════ NEWS ═══════════
-function renderNews(){
+let pressReleases = [];
+
+async function fetchPressReleases(){
+  try{
+    const RSS_URL = 'https://prtimes.jp/companyrss/63503.rss';
+    const PROXY = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
+    const res = await fetch(PROXY);
+    const data = await res.json();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(data.contents, 'text/xml');
+    const items = xml.querySelectorAll('item');
+    pressReleases = Array.from(items).slice(0,3).map(item=>({
+      title: item.querySelector('title')?.textContent || '',
+      link: item.querySelector('link')?.textContent || '',
+      date: item.querySelector('pubDate')?.textContent || '',
+      desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').slice(0,100)+'...' || '',
+    }));
+  } catch(e){ console.warn('PR fetch error', e); pressReleases = []; }
+}
+
+function renderPressReleases(){
+  const el = document.getElementById('press-release-list');
+  if(!el) return;
+  if(pressReleases.length === 0){
+    el.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text3)">プレスリリースを取得中...</div>';
+    return;
+  }
+  el.innerHTML = pressReleases.map(p=>`
+    <a href="${p.link}" target="_blank" style="display:block;padding:12px;border-radius:8px;text-decoration:none;color:inherit;transition:background .15s;margin-bottom:4px" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='transparent'">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">📢 プレスリリース</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px;line-height:1.4">${p.title}</div>
+      <div style="font-size:11px;color:var(--text3)">${new Date(p.date).toLocaleDateString('ja-JP')}</div>
+    </a>
+  `).join('');
+}
+
+async function renderNews(){
   const sorted=[...articles].sort((a,b)=>b.id-a.id);
-  const hero=sorted[0];
-  document.getElementById('news-hero').innerHTML=`
-    <div class="news-kicker" style="color:${catColors[hero.cat]||'#888'}">${hero.cat}${hero.isNew?' <span class="new-tag">NEW</span>':''}</div>
-    <div class="news-headline">${hero.title}</div>
-    <div class="news-body">${hero.body}</div>
-    <div class="news-byline">👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</div>`;
-  document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item">
-    <div class="ni-num">0${i+1}</div>
-    <div><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
-  </div>`).join('');
+  if(sorted.length > 0){
+    const hero=sorted[0];
+    document.getElementById('news-hero').innerHTML=`
+      <div class="news-kicker" style="color:${catColors[hero.cat]||'#888'}">${hero.cat}${hero.isNew?' <span class="new-tag">NEW</span>':''}</div>
+      <div class="news-headline">${hero.title}</div>
+      <div class="news-body">${hero.body}</div>
+      <div class="news-byline">👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</div>`;
+    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item">
+      <div class="ni-num">0${i+1}</div>
+      <div><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
+    </div>`).join('');
+  }
   const ns=document.getElementById('news-sched');
   ns.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
   const fl=document.getElementById('faq-list');
@@ -845,6 +887,10 @@ function renderNews(){
     <div class="faq-q" onclick="toggleFaq(${i})"><span class="faq-qmark">Q</span><span style="flex:1">${f.q}</span><span class="faq-chevron">▼</span></div>
     <div class="faq-a"><div class="faq-a-inner">${f.a}</div></div>
   </div>`).join('');
+  // プレスリリース取得・表示
+  renderPressReleases();
+  await fetchPressReleases();
+  renderPressReleases();
 }
 
 function toggleFaq(i){document.getElementById('faq-'+i).classList.toggle('open')}

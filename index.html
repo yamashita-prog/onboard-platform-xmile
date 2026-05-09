@@ -690,9 +690,9 @@ async function saveAll(){}  // Supabase版では個別保存するので不要
 async function loadAll(){
   try{
     const [r, c, a] = await Promise.all([
-      dbFetch('recruiters'),
-      dbFetch('candidates'),
-      dbFetch('articles'),
+      dbFetch('recruiters').catch(()=>[]),
+      dbFetch('candidates').catch(()=>[]),
+      dbFetch('articles').catch(()=>[]),
     ]);
     if(r && r.length) recruiters = r;
     if(c && c.length) candidates = c;
@@ -806,7 +806,7 @@ function openCand(id){
   document.getElementById('cand-modal').classList.add('open');
 }
 
-function toggleDoc(cid,idx){
+async function toggleDoc(cid,idx){
   const c=candidates.find(x=>x.id===cid);
   c.docs[idx].done=!c.docs[idx].done;
   if(c.docs[idx].done) c.docs[idx].date='今日';
@@ -821,7 +821,7 @@ function closeCandModal(e){if(!e||e.target===document.getElementById('cand-modal
 function openAddCandidate(){document.getElementById('add-cand-modal').classList.add('open')}
 function closeAddCandModal(e){if(!e||e.target===document.getElementById('add-cand-modal'))document.getElementById('add-cand-modal').classList.remove('open')}
 
-function addCandidate(){
+async function addCandidate(){
   const name=document.getElementById('ac-name').value.trim();
   if(!name) return;
   candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
@@ -858,7 +858,7 @@ function toggleFaq(i){document.getElementById('faq-'+i).classList.toggle('open')
 function openAddNews(){document.getElementById('add-news-modal').classList.add('open')}
 function closeAddNewsModal(e){if(!e||e.target===document.getElementById('add-news-modal'))document.getElementById('add-news-modal').classList.remove('open')}
 
-function addNews(){
+async function addNews(){
   const title=document.getElementById('an-title').value.trim();
   const body=document.getElementById('an-body').value.trim();
   if(!title||!body) return;
@@ -1031,7 +1031,7 @@ function clearFile(id){
   m._pendingFile=null;
 }
 
-function completeMission(id){
+async function completeMission(id){
   const m=missions.find(x=>x.id===id);
   if(!m||m.done) return;
   if((m.submitType==='doc'||m.submitType==='image')&&!m._pendingFile) return;
@@ -1266,7 +1266,7 @@ function renderTeam(){
 }
 function openAddTeam(){document.getElementById('add-team-modal').classList.add('open')}
 function closeAddTeamModal(e){if(!e||e.target===document.getElementById('add-team-modal'))document.getElementById('add-team-modal').classList.remove('open')}
-function addTeamMember(){
+async function addTeamMember(){
   const name=document.getElementById('at-name').value.trim();
   if(!name) return;
   recruiters.push({id:'rec_'+Date.now(),name,role:document.getElementById('at-role').value||'採用担当',email:document.getElementById('at-email').value||'',av:document.getElementById('at-av').value||'👤',avail:'今週空きあり'});
@@ -1276,7 +1276,7 @@ function addTeamMember(){
   renderTeam();
   showToast('✅ 担当者を追加しました');
 }
-function deleteTeamMember(id){
+async function deleteTeamMember(id){
   if(!confirm('この担当者を削除しますか？')) return;
   const idx=recruiters.findIndex(x=>x.id===id);
   if(idx>-1) recruiters.splice(idx,1);

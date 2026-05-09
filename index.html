@@ -689,7 +689,7 @@ async function loadAll(){
     // Supabaseにデータがあれば完全に上書き
     if(r && r.length > 0) recruiters = r;
     if(c && c.length > 0) candidates = c;
-    if(a && a.length > 0) articles = a;
+    if(a && a.length > 0) articles = a.map(x=>({...x, isNew: x.is_new}));
   } catch(e){ console.warn('loadAll error', e); }
 }
 

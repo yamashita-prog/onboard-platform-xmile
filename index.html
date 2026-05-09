@@ -819,7 +819,7 @@ async function toggleDoc(cid,idx){
   if(c.docs[idx].done) c.docs[idx].date='今日';
   c.progress=Math.round(c.docs.filter(d=>d.done).length/c.docs.length*100);
   c.status=c.progress===100?'done':c.progress===0?'risk':'pend';
-  await dbUpsert('candidates', c);
+  await dbUpsert('candidates', {...c, docs: c.docs});
   openCand(cid);
   renderDashboard();
 }

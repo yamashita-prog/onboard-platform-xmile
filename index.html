@@ -484,9 +484,6 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-</div><!-- /main -->
-</div><!-- /body-wrap -->
-
 <!-- ===== TEAM ===== -->
 <div class="page" id="page-team">
   <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between">
@@ -503,22 +500,10 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<!-- MODAL: 担当者追加 -->
-<div class="modal-overlay" id="add-team-modal" onclick="closeAddTeamModal(event)">
-  <div class="modal">
-    <div class="modal-head"><div class="modal-title" id="team-modal-title">担当者を追加</div><button class="modal-close" onclick="closeAddTeamModal()">✕</button></div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="field form-full"><label>名前</label><input id="at-name" placeholder="田村 さくら"></div>
-        <div class="field form-full"><label>役職</label><input id="at-role" placeholder="新卒採用担当"></div>
-        <div class="field form-full"><label>メールアドレス</label><input id="at-email" placeholder="sakura@xmile.co.jp" type="email"></div>
-        <div class="field form-full"><label>アイコン（絵文字）</label><input id="at-av" placeholder="👩" maxlength="2"></div>
-      </div>
-      <input type="hidden" id="at-edit-id">
-      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveTeamMember()">保存する</button>
-    </div>
-  </div>
-</div>
+</div><!-- /main -->
+</div><!-- /body-wrap -->
+
+<!-- MODAL: 候補者詳細 -->
 <div class="modal-overlay" id="cand-modal" onclick="closeCandModal(event)">
   <div class="modal" id="cand-modal-body"></div>
 </div>
@@ -559,6 +544,22 @@ tbody tr:hover td{background:var(--s2)}
 <!-- MISSION MODAL -->
 <div class="modal-overlay" id="mission-modal" onclick="closeMissionModal(event)">
   <div class="modal" id="mission-modal-body"></div>
+</div>
+
+<!-- MODAL: 担当者追加 -->
+<div class="modal-overlay" id="add-team-modal" onclick="closeAddTeamModal(event)">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">担当者を追加</div><button class="modal-close" onclick="closeAddTeamModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>名前</label><input id="at-name" placeholder="田村 さくら"></div>
+        <div class="field"><label>役職</label><input id="at-role" placeholder="新卒採用担当"></div>
+        <div class="field form-full"><label>メールアドレス</label><input id="at-email" placeholder="tamura@company.com"></div>
+        <div class="field"><label>アイコン（絵文字）</label><input id="at-av" placeholder="👩" maxlength="2"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="addTeamMember()">保存する</button>
+    </div>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -640,9 +641,9 @@ const schedTypes=[
   {id:'followup',icon:'📋',name:'課題フォローアップ',desc:'入社前ミッションの進捗を確認',dur:'30分'},
 ];
 const recruiters=[
-  {id:'tamura',av:'👩',name:'田村 さくら',role:'新卒採用担当',email:'sakura@xmile.co.jp'},
-  {id:'sasaki',av:'👨',name:'佐々木 拓也',role:'インターンシップ担当',email:'takuya@xmile.co.jp'},
-  {id:'yamaguchi',av:'🧑',name:'山口 恵',role:'人事・研修担当',email:'megumi@xmile.co.jp'},
+  {id:'tamura',av:'👩',name:'田村 さくら',role:'新卒採用担当',avail:'今週空きあり'},
+  {id:'sasaki',av:'👨',name:'佐々木 拓也',role:'インターンシップ担当',avail:'来週以降'},
+  {id:'yamaguchi',av:'🧑',name:'山口 恵',role:'人事・研修担当',avail:'今週空きあり'},
 ];
 const takenSlots={};
 const today=new Date();
@@ -652,6 +653,52 @@ let calMonth=new Date(today.getFullYear(),today.getMonth(),1);
 
 function dk(d){return d.toISOString().split('T')[0]}
 function slotsFor(d){const dow=d.getDay();if(!dow||dow===6)return[];const base=['09:00','10:00','11:00','13:00','14:00','15:00','16:00'];return base.map(t=>({time:t,taken:(takenSlots[dk(d)]||[]).includes(t)}))}
+
+// ═══════════ SUPABASE ═══════════
+const SUPABASE_URL = 'https://yfhmqqqbaolnigxyvuud.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_AQEGjbPBvHyMV_dSEXCTqA_nNFDCqtm';
+
+async function dbFetch(table){
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id`, {
+    headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
+  });
+  return res.ok ? res.json() : [];
+}
+
+async function dbUpsert(table, data){
+  return fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(Array.isArray(data) ? data : [data])
+  });
+}
+
+async function dbDelete(table, id){
+  return fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
+  });
+}
+
+async function saveAll(){}  // Supabase版では個別保存するので不要
+
+async function loadAll(){
+  try{
+    const [r, c, a] = await Promise.all([
+      dbFetch('recruiters'),
+      dbFetch('candidates'),
+      dbFetch('articles'),
+    ]);
+    if(r && r.length) recruiters = r;
+    if(c && c.length) candidates = c;
+    if(a && a.length) articles = a;
+  } catch(e){ console.warn('loadAll error', e); }
+}
 
 // ═══════════ MODE ═══════════
 let isAdmin=true;
@@ -765,6 +812,7 @@ function toggleDoc(cid,idx){
   if(c.docs[idx].done) c.docs[idx].date='今日';
   c.progress=Math.round(c.docs.filter(d=>d.done).length/c.docs.length*100);
   c.status=c.progress===100?'done':c.progress===0?'risk':'pend';
+  await dbUpsert('candidates', c);
   openCand(cid);
   renderDashboard();
 }
@@ -779,6 +827,7 @@ function addCandidate(){
   candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
   ['ac-name','ac-univ','ac-dept','ac-email'].forEach(id=>document.getElementById(id).value='');
   closeAddCandModal();
+  await dbUpsert('candidates', candidates[candidates.length-1]);
   renderCandidates();
   showToast('✅ 内定者を追加しました');
 }
@@ -816,6 +865,7 @@ function addNews(){
   articles.push({id:Date.now(),cat:document.getElementById('an-cat').value,title,body,author:document.getElementById('an-author').value||'採用担当',date:'今日',isNew:true,imp:document.getElementById('an-imp').value});
   ['an-title','an-body','an-author'].forEach(id=>document.getElementById(id).value='');
   closeAddNewsModal();
+  await dbUpsert('articles', articles[articles.length-1]);
   renderNews();
   showToast('📰 記事を追加しました');
 }
@@ -995,58 +1045,6 @@ function completeMission(id){
 
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
-// ═══════════ GOOGLE OAUTH ═══════════
-const GCAL_CLIENT_ID = '50754780423-m7vtedgacl7i7qrt4mg8o9v7t9112e2j.apps.googleusercontent.com';
-const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar';
-let gcalAccessToken = null;
-let googleAuthLoaded = false;
-
-function loadGoogleAuth() {
-  if(googleAuthLoaded) return;
-  googleAuthLoaded = true;
-  const script = document.createElement('script');
-  script.src = 'https://accounts.google.com/gsi/client';
-  script.onload = () => console.log('Google Identity Services loaded');
-  document.head.appendChild(script);
-}
-
-function signInWithGoogle(callback) {
-  if(gcalAccessToken) { callback(gcalAccessToken); return; }
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: GCAL_CLIENT_ID,
-    scope: GCAL_SCOPES,
-    callback: (resp) => {
-      if(resp.access_token) {
-        gcalAccessToken = resp.access_token;
-        showToast('✅ Googleカレンダーと連携しました');
-        callback(gcalAccessToken);
-      }
-    }
-  });
-  client.requestAccessToken();
-}
-
-async function getCalendarEvents(date, token) {
-  const timeMin = new Date(date); timeMin.setHours(0,0,0,0);
-  const timeMax = new Date(date); timeMax.setHours(23,59,59,0);
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const data = await res.json();
-  return data.items || [];
-}
-
-async function createCalendarEvent(title, date, slot, dur, token) {
-  const [h,m] = slot.split(':').map(Number);
-  const start = new Date(date); start.setHours(h,m,0,0);
-  const end = new Date(start); end.setMinutes(end.getMinutes()+dur);
-  const body = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
-  await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-}
-
 // ═══════════ SCHEDULE BOOKING (Google Calendar連携) ═══════════
 // リクルーターのGoogleカレンダーから空き時間を取得してスロットを生成する
 let gcalSlots = {}; // { 'YYYY-MM-DD': [{time:'10:00', available:true}, ...] }
@@ -1054,47 +1052,78 @@ let loadingSlots = false;
 
 async function fetchAvailability(recruiter, date) {
   const key = dk(date);
-  if(gcalSlots[key] !== undefined) return;
+  if (gcalSlots[key] !== undefined) return; // キャッシュ済み
   loadingSlots = true;
   renderSchedStep();
 
-  const doFetch = async (token) => {
-    try {
-      const events = await getCalendarEvents(date, token);
-      const busyTimes = events.map(e => ({
-        start: new Date(e.start.dateTime||e.start.date),
-        end: new Date(e.end.dateTime||e.end.date)
-      }));
-      const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
-      gcalSlots[key] = base.map(t => {
-        const [h,m] = t.split(':').map(Number);
-        const slotStart = new Date(date); slotStart.setHours(h,m,0,0);
-        const slotEnd = new Date(slotStart); slotEnd.setMinutes(slotEnd.getMinutes()+30);
-        const busy = busyTimes.some(b => slotStart < b.end && slotEnd > b.start);
-        return { time: t, available: !busy };
-      });
-    } catch(e) {
-      const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
-      gcalSlots[key] = base.map(t => ({ time: t, available: true }));
-    }
-    loadingSlots = false;
-    renderSchedStep();
-  };
+  try {
+    const timeMin = new Date(date);
+    timeMin.setHours(9, 0, 0, 0);
+    const timeMax = new Date(date);
+    timeMax.setHours(18, 0, 0, 0);
 
-  signInWithGoogle(doFetch);
+    const prompt = `Google CalendarでユーザーのカレンダーIDはprimaryです。
+${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得してください。
+取得した予定をもとに、9:00〜17:00の間で30分刻みの時間枠のうち、予定が入っていない空き時間を特定してください。
+以下のJSON形式のみで返答してください（前置き・説明不要）:
+{"slots":[{"time":"09:00","available":true},{"time":"09:30","available":false},{"time":"10:00","available":true},...]}
+予定が取得できない場合は全スロットをavailable:trueとして返してください。`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    const textBlock = data.content?.find(b => b.type === 'text');
+    const text = textBlock?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    gcalSlots[key] = parsed.slots;
+  } catch(e) {
+    // カレンダー取得失敗時はデフォルトスロットを表示
+    const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+    gcalSlots[key] = base.map(t => ({ time: t, available: true }));
+  }
+  loadingSlots = false;
+  renderSchedStep();
 }
 
 async function submitToCalendar(recruiter, date, slot, type) {
-  const durMap = {'60分':60,'45分':45,'30分':30};
-  const dur = durMap[type.dur] || 30;
-  const title = `【面談】${type.name} - ${recruiter.name}`;
-  signInWithGoogle(async (token) => {
-    try {
-      await createCalendarEvent(title, date, slot, dur, token);
-    } catch(e) {
-      console.log('Calendar event creation failed:', e);
-    }
-  });
+  try {
+    const dows = ['日','月','火','水','木','金','土'];
+    const startDt = new Date(date);
+    const [h, m] = slot.split(':').map(Number);
+    startDt.setHours(h, m, 0, 0);
+    const endDt = new Date(startDt);
+    endDt.setMinutes(endDt.getMinutes() + (type.dur === '60分' ? 60 : type.dur === '45分' ? 45 : 30));
+
+    const prompt = `Google Calendarのプライマリカレンダーに以下の予定を追加してください：
+タイトル：「${type.name} - ${recruiter.name}」
+開始：${startDt.toISOString()}
+終了：${endDt.toISOString()}
+説明：内定者との面談（${type.name}）
+予定を作成したら「作成完了」とだけ答えてください。`;
+
+    await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+  } catch(e) {
+    console.log('Calendar registration failed (non-critical):', e);
+  }
 }
 
 function renderSchedStep(){
@@ -1226,77 +1255,34 @@ async function sBookSubmit(){
 }
 function sBookReset(){Object.assign(sBook,{step:1,type:null,rec:null,date:null,slot:null});gcalSlots={};renderSchedStep()}
 
-// ═══════════ TEAM MANAGEMENT ═══════════
+// ═══════════ TEAM ═══════════
 function renderTeam(){
-  document.getElementById('team-table').innerHTML = recruiters.map(r=>`
-    <tr>
-      <td><div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;border-radius:50%;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">${r.av}</div>
-        <strong>${r.name}</strong>
-      </div></td>
-      <td style="color:var(--text2)">${r.role}</td>
-      <td style="color:var(--text2)">${r.email||'—'}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="editTeamMember('${r.id}')">編集</button>
-          <button class="btn btn-sm" style="background:rgba(220,38,38,.08);color:var(--red);border:1px solid rgba(220,38,38,.15)" onclick="deleteTeamMember('${r.id}')">削除</button>
-        </div>
-      </td>
-    </tr>`).join('');
+  document.getElementById('team-table').innerHTML=recruiters.map(r=>`<tr>
+    <td><strong>${r.av} ${r.name}</strong></td>
+    <td style="color:var(--text2)">${r.role}</td>
+    <td style="color:var(--text2)">${r.email||'未設定'}</td>
+    <td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteTeamMember('${r.id}')">削除</button></td>
+  </tr>`).join('');
 }
-
-function openAddTeam(){
-  document.getElementById('team-modal-title').textContent='担当者を追加';
-  document.getElementById('at-name').value='';
-  document.getElementById('at-role').value='';
-  document.getElementById('at-email').value='';
-  document.getElementById('at-av').value='👤';
-  document.getElementById('at-edit-id').value='';
-  document.getElementById('add-team-modal').classList.add('open');
-}
-
-function editTeamMember(id){
-  const r=recruiters.find(x=>x.id===id);
-  if(!r) return;
-  document.getElementById('team-modal-title').textContent='担当者を編集';
-  document.getElementById('at-name').value=r.name;
-  document.getElementById('at-role').value=r.role;
-  document.getElementById('at-email').value=r.email||'';
-  document.getElementById('at-av').value=r.av;
-  document.getElementById('at-edit-id').value=id;
-  document.getElementById('add-team-modal').classList.add('open');
-}
-
-function saveTeamMember(){
+function openAddTeam(){document.getElementById('add-team-modal').classList.add('open')}
+function closeAddTeamModal(e){if(!e||e.target===document.getElementById('add-team-modal'))document.getElementById('add-team-modal').classList.remove('open')}
+function addTeamMember(){
   const name=document.getElementById('at-name').value.trim();
-  const role=document.getElementById('at-role').value.trim();
-  const email=document.getElementById('at-email').value.trim();
-  const av=document.getElementById('at-av').value.trim()||'👤';
-  const editId=document.getElementById('at-edit-id').value;
   if(!name) return;
-  if(editId){
-    const r=recruiters.find(x=>x.id===editId);
-    if(r){r.name=name;r.role=role;r.email=email;r.av=av;}
-    showToast('✅ 担当者情報を更新しました');
-  } else {
-    recruiters.push({id:'r_'+Date.now(),av,name,role,email});
-    showToast('✅ 担当者を追加しました');
-  }
+  recruiters.push({id:'rec_'+Date.now(),name,role:document.getElementById('at-role').value||'採用担当',email:document.getElementById('at-email').value||'',av:document.getElementById('at-av').value||'👤',avail:'今週空きあり'});
+  ['at-name','at-role','at-email','at-av'].forEach(id=>document.getElementById(id).value='');
   closeAddTeamModal();
+  await dbUpsert('recruiters', recruiters[recruiters.length-1]);
   renderTeam();
+  showToast('✅ 担当者を追加しました');
 }
-
 function deleteTeamMember(id){
   if(!confirm('この担当者を削除しますか？')) return;
   const idx=recruiters.findIndex(x=>x.id===id);
   if(idx>-1) recruiters.splice(idx,1);
+  await dbDelete('recruiters', id);
   renderTeam();
   showToast('🗑 担当者を削除しました');
-}
-
-function closeAddTeamModal(e){
-  if(!e||e.target===document.getElementById('add-team-modal'))
-    document.getElementById('add-team-modal').classList.remove('open');
 }
 
 // ═══════════ TIMELINE ═══════════
@@ -1312,8 +1298,17 @@ function showToast(msg){
 }
 
 // ═══════════ INIT ═══════════
-renderDashboard();
-loadGoogleAuth();
+async function init(){
+  const loading = document.createElement('div');
+  loading.id = 'loading-overlay';
+  loading.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text2);gap:10px;font-family:Noto Sans JP,sans-serif';
+  loading.innerHTML = '<div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">🔄</div> データを読み込み中...';
+  document.body.appendChild(loading);
+  await loadAll();
+  document.body.removeChild(loading);
+  renderDashboard();
+}
+init();
 </script>
 </body>
 </html>

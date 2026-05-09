@@ -574,23 +574,9 @@ const LEVELS=[
 ];
 const catColors={'お知らせ':'#f87171','社長メッセージ':'#5b8aff','イベント':'#20d49a','制度・福利厚生':'#a855f7','文化':'#f59e0b'};
 
-let candidates=[
-  {id:1,name:'田中 花子',univ:'早稲田大学 商学部',dept:'マーケティング部',email:'hanako@ex.com',progress:75,status:'pend',
-   docs:[{n:'住民票',done:true,date:'5/1'},{n:'卒業見込証明書',done:true,date:'5/2'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:true,date:'4/28'}]},
-  {id:2,name:'佐藤 健太',univ:'慶應義塾大学 理工学部',dept:'プロダクト開発部',email:'kenta@ex.com',progress:50,status:'pend',
-   docs:[{n:'住民票',done:true,date:'5/3'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:true,date:'5/1'},{n:'誓約書',done:false,date:'-'}]},
-  {id:3,name:'山田 美咲',univ:'東京大学 文学部',dept:'人事部',email:'misaki@ex.com',progress:100,status:'done',
-   docs:[{n:'住民票',done:true,date:'4/25'},{n:'卒業見込証明書',done:true,date:'4/26'},{n:'健康診断書',done:true,date:'4/27'},{n:'誓約書',done:true,date:'4/24'}]},
-  {id:4,name:'鈴木 大輝',univ:'明治大学 経営学部',dept:'営業部',email:'daiki@ex.com',progress:25,status:'risk',
-   docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:true,date:'5/2'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]},
-];
+let candidates=[];
 
-let articles=[
-  {id:1,cat:'社長メッセージ',title:'入社を心待ちにしています',body:'皆さんの入社まであと残りわずかとなりました。今年の内定者は例年以上にユニークな個性を持つメンバーが揃っており、経営陣一同、皆さんとともに新しい挑戦ができることを楽しみにしています。',author:'代表取締役 山本 誠一',date:'5月4日',isNew:true,imp:'important'},
-  {id:2,cat:'お知らせ',title:'内定式の詳細日程が確定しました',body:'5月15日（木）14:00〜 本社3階大会議室にて内定式を開催します。スーツ着用、10分前集合をお願いします。',author:'採用担当 田村 さくら',date:'5月3日',isNew:true,imp:'urgent'},
-  {id:3,cat:'制度・福利厚生',title:'社内カフェテリアと各種手当について',body:'入社後に利用できる各種制度をご紹介します。書籍購入補助（月5,000円まで）、資格取得支援制度などがあります。',author:'人事部 山口 恵',date:'4月28日',isNew:false,imp:'normal'},
-  {id:4,cat:'文化',title:'社内部活動・コミュニティ紹介',body:'当社には現在12の部活動があります。フットサル、写真部、読書会など。内定者の皆さんも入社前から参加OKです！',author:'採用担当 佐々木 拓也',date:'4月22日',isNew:false,imp:'normal'},
-];
+let articles=[];
 
 const schedules=[
   {month:'MAY',day:'15',dow:'木',title:'内定式',detail:'本社3階大会議室 / 14:00〜17:00',tag:'req',tagLabel:'必須参加'},

@@ -656,13 +656,18 @@ function slotsFor(d){const dow=d.getDay();if(!dow||dow===6)return[];const base=[
 
 // ═══════════ SUPABASE ═══════════
 const SUPABASE_URL = 'https://yfhmqqqbaolnigxyvuud.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_AQEGjbPBvHyMV_dSEXCTqA_nNFDCqtm';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmaG1xcXFiYW9sbmlneHl2dXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMTgxNjAsImV4cCI6MjA5Mzg5NDE2MH0.LWwHJhHuws091bKTP1Y7u-nQJ6JlmmdmEfwqRab-rgU';
 
 async function dbFetch(table){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*&order=id`, {
-    headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json'
+    }
   });
-  return res.ok ? res.json() : [];
+  if(!res.ok){ console.error('dbFetch error', table, res.status, await res.text()); return []; }
+  return res.json();
 }
 
 async function dbUpsert(table, data){
@@ -1305,6 +1310,7 @@ async function init(){
   loading.innerHTML = '<div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">🔄</div> データを読み込み中...';
   document.body.appendChild(loading);
   await loadAll();
+  console.log('loaded recruiters:', recruiters.length, 'candidates:', candidates.length, 'articles:', articles.length);
   document.body.removeChild(loading);
   renderDashboard();
 }

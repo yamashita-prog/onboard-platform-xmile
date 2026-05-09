@@ -640,7 +640,7 @@ const schedTypes=[
   {id:'mentor',icon:'👤',name:'メンター顔合わせ',desc:'配属先メンターとの初回面談',dur:'45分'},
   {id:'followup',icon:'📋',name:'課題フォローアップ',desc:'入社前ミッションの進捗を確認',dur:'30分'},
 ];
-const recruiters=[
+let recruiters=[
   {id:'tamura',av:'👩',name:'田村 さくら',role:'新卒採用担当',avail:'今週空きあり'},
   {id:'sasaki',av:'👨',name:'佐々木 拓也',role:'インターンシップ担当',avail:'来週以降'},
   {id:'yamaguchi',av:'🧑',name:'山口 恵',role:'人事・研修担当',avail:'今週空きあり'},
@@ -695,13 +695,15 @@ async function saveAll(){}  // Supabase版では個別保存するので不要
 async function loadAll(){
   try{
     const [r, c, a] = await Promise.all([
-      dbFetch('recruiters').catch(()=>[]),
-      dbFetch('candidates').catch(()=>[]),
-      dbFetch('articles').catch(()=>[]),
+      dbFetch('recruiters').catch(e=>{console.error('recruiters fetch error:',e);return [];}),
+      dbFetch('candidates').catch(e=>{console.error('candidates fetch error:',e);return [];}),
+      dbFetch('articles').catch(e=>{console.error('articles fetch error:',e);return [];}),
     ]);
-    if(r && r.length) recruiters = r;
-    if(c && c.length) candidates = c;
-    if(a && a.length) articles = a;
+    console.log('DB data:', r, c, a);
+    // Supabaseにデータがあれば完全に上書き
+    if(r && r.length > 0) recruiters = r;
+    if(c && c.length > 0) candidates = c;
+    if(a && a.length > 0) articles = a;
   } catch(e){ console.warn('loadAll error', e); }
 }
 

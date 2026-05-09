@@ -834,7 +834,7 @@ let pressReleases = [];
 
 async function fetchPressReleases(){
   try{
-    const RSS_URL = 'https://prtimes.jp/companyrss/63503.rss';
+    const RSS_URL = 'https://prtimes.jp/companyrdf.php?company_id=63503';
     // 複数のプロキシを試す
     const proxies = [
       `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,

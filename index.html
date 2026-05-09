@@ -835,11 +835,28 @@ let pressReleases = [];
 async function fetchPressReleases(){
   try{
     const RSS_URL = 'https://prtimes.jp/companyrss/63503.rss';
-    const PROXY = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
-    const res = await fetch(PROXY);
-    const data = await res.json();
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(data.contents, 'text/xml');
+    // 複数のプロキシを試す
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
+    ];
+    let xml = null;
+    for(const proxy of proxies){
+      try{
+        const res = await fetch(proxy);
+        let text = '';
+        if(proxy.includes('allorigins')){
+          const data = await res.json();
+          text = data.contents;
+        } else {
+          text = await res.text();
+        }
+        const parser = new DOMParser();
+        xml = parser.parseFromString(text, 'text/xml');
+        if(xml.querySelector('item')) break;
+      } catch(e){ continue; }
+    }
+    if(!xml) throw new Error('all proxies failed');
     const items = xml.querySelectorAll('item');
     pressReleases = Array.from(items).slice(0,3).map(item=>({
       title: item.querySelector('title')?.textContent || '',
@@ -847,7 +864,7 @@ async function fetchPressReleases(){
       date: item.querySelector('pubDate')?.textContent || '',
       desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').slice(0,100)+'...' || '',
     }));
-  } catch(e){ console.warn('PR fetch error', e); pressReleases = []; }
+  } catch(e){ console.warn('PR fetch error', e); pressReleases = [{title:'プレスリリースを取得できませんでした', link:'https://prtimes.jp/main/html/searchrlp/company_id/63503', date:'', desc:''}]; }
 }
 
 function renderPressReleases(){

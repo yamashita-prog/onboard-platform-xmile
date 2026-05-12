@@ -1890,8 +1890,7 @@ function loginSuccess(candidate){
   document.getElementById('mode-admin').style.display='none';
   document.getElementById('mode-user').style.display='none';
 
-  // 右上の名前を更新
-  document.getElementById('topbar-name').textContent = candidate.name;
+  // 右上の名前を更新（topbar-nameは削除済みのためスキップ）
   document.getElementById('sf-name').textContent = candidate.name;
   document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';
   document.getElementById('sf-av').textContent = candidate.name.charAt(0);

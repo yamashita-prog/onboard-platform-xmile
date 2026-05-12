@@ -712,16 +712,28 @@ async function dbDelete(table, id){
   });
 }
 
+// ミッション進捗データ（candidate_id -> {mission_id: {done, submitted_file, xp}}）
+let missionProgress = {};
+
 async function loadAll(){
   try{
-    const [r, c, a] = await Promise.all([
+    const [r, c, a, mp] = await Promise.all([
       dbFetch('recruiters').catch(e=>{console.error('recruiters fetch error:',e);return [];}),
       dbFetch('candidates').catch(e=>{console.error('candidates fetch error:',e);return [];}),
       dbFetch('articles').catch(e=>{console.error('articles fetch error:',e);return [];}),
+      dbFetch('missions').catch(e=>{console.error('missions fetch error:',e);return [];}),
     ]);
     if(r && r.length > 0) recruiters = r;
     if(c && c.length > 0) candidates = c;
     if(a && a.length > 0) articles = a.map(x=>({...x, isNew: x.is_new}));
+    // ミッション進捗をcandidate_idでまとめる
+    if(mp && mp.length > 0){
+      missionProgress = {};
+      mp.forEach(row => {
+        if(!missionProgress[row.candidate_id]) missionProgress[row.candidate_id] = {};
+        missionProgress[row.candidate_id][row.mission_id] = {done: row.done, submittedFile: row.submitted_file, xp: row.xp};
+      });
+    }
   } catch(e){ console.warn('loadAll error', e); }
 }
 
@@ -942,10 +954,20 @@ async function renderNews(){
       <div class="news-kicker" style="color:${catColors[hero.cat]||'#888'}">${hero.cat}${hero.isNew?' <span class="new-tag">NEW</span>':''}</div>
       <div class="news-headline">${hero.title}</div>
       <div class="news-body">${hero.body}</div>
-      <div class="news-byline">👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</div>`;
-    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item">
+      <div class="news-byline" style="display:flex;align-items:center;justify-content:space-between">
+        <span>👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</span>
+        ${isAdmin?`<div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openEditNews(${hero.id})">✏️ 編集</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteNews(${hero.id})">🗑 削除</button>
+        </div>`:''}
+      </div>`;
+    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item" style="align-items:center">
       <div class="ni-num">0${i+1}</div>
-      <div><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
+      <div style="flex:1"><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
+      ${isAdmin?`<div style="display:flex;gap:4px;flex-shrink:0">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditNews(${a.id})">✏️</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteNews(${a.id})">🗑</button>
+      </div>`:''}
     </div>`).join('');
   }
   const ns=document.getElementById('news-sched');
@@ -958,6 +980,50 @@ async function renderNews(){
   renderPressReleases();
   await fetchPressReleases();
   renderPressReleases();
+}
+
+async function deleteNews(id){
+  const a=articles.find(x=>x.id===id);
+  if(!confirm(`「${a.title}」を削除しますか？`)) return;
+  const idx=articles.findIndex(x=>x.id===id);
+  if(idx>-1) articles.splice(idx,1);
+  await dbDelete('articles', id);
+  renderNews();
+  showToast('🗑 記事を削除しました');
+}
+
+function openEditNews(id){
+  const a=articles.find(x=>x.id===id);
+  document.getElementById('an-cat').value=a.cat||'お知らせ';
+  document.getElementById('an-imp').value=a.imp||'normal';
+  document.getElementById('an-title').value=a.title||'';
+  document.getElementById('an-body').value=a.body||'';
+  document.getElementById('an-author').value=a.author||'';
+  // 保存ボタンを「更新」モードに切り替え
+  const btn=document.querySelector('#add-news-modal .btn-primary');
+  btn.textContent='更新する';
+  btn.onclick=()=>updateNews(id);
+  document.querySelector('#add-news-modal .modal-title').textContent='記事を編集';
+  document.getElementById('add-news-modal').classList.add('open');
+}
+
+async function updateNews(id){
+  const a=articles.find(x=>x.id===id);
+  a.cat=document.getElementById('an-cat').value;
+  a.imp=document.getElementById('an-imp').value;
+  a.title=document.getElementById('an-title').value.trim();
+  a.body=document.getElementById('an-body').value.trim();
+  a.author=document.getElementById('an-author').value||'採用担当';
+  if(!a.title||!a.body) return;
+  closeAddNewsModal();
+  await dbUpsert('articles', {id:a.id,cat:a.cat,title:a.title,body:a.body,author:a.author,date:a.date,is_new:a.isNew||false,imp:a.imp});
+  // ボタンを追加モードに戻す
+  const btn=document.querySelector('#add-news-modal .btn-primary');
+  btn.textContent='追加する';
+  btn.onclick=addNews;
+  document.querySelector('#add-news-modal .modal-title').textContent='記事・お知らせを追加';
+  renderNews();
+  showToast('✅ 記事を更新しました');
 }
 
 function toggleFaq(i){document.getElementById('faq-'+i).classList.toggle('open')}
@@ -1024,11 +1090,19 @@ function renderMissions(){
     <div class="badge-cond">${b.cond}</div>
   </div>`).join('');
 
+  // ランキングをcandidates+missionProgressから動的生成
   const rc=['g','s','b'];
-  document.getElementById('rank-list').innerHTML=ranking.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
+  const rankData = candidates.map(c=>{
+    const prog = missionProgress[c.id]||{};
+    const totalXp = Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0);
+    const lv = getLevel(totalXp);
+    const isMe = loggedInCandidate && c.id===loggedInCandidate.id;
+    return {name:c.name, xp:totalXp, lv:lv.lv, me:isMe};
+  }).sort((a,b)=>b.xp-a.xp);
+  document.getElementById('rank-list').innerHTML=rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
-    <div class="rank-av">${r.avatar}</div>
-    <div class="rank-info"><div class="rank-name">${r.name}${r.me?' (あなた)':''}</div><div class="rank-lv">Lv.${r.lv}</div></div>
+    <div class="rank-av">${r.name.charAt(0)}</div>
+    <div class="rank-info"><div class="rank-name">${r.me?r.name+' (あなた)':r.name}</div><div class="rank-lv">Lv.${r.lv}</div></div>
     <div class="rank-xp">${r.xp} XP</div>
   </div>`).join('');
 }
@@ -1154,6 +1228,12 @@ async function completeMission(id){
   m.done=true;
   m.submittedFile=m._pendingFile||null;
   xp+=m.xp;
+  // Supabaseに保存
+  if(loggedInCandidate){
+    if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
+    missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:m.xp};
+    await dbUpsert('missions',{candidate_id:loggedInCandidate.id, mission_id:m.id, done:true, submitted_file:m.submittedFile||null, xp:m.xp});
+  }
   closeMissionModal();
   renderMissions();
   showToast(`🎉 提出完了！ +${m.xp} XP`);
@@ -1482,6 +1562,20 @@ function loginSuccess(candidate){
     topbarRight.insertBefore(btn, topbarRight.firstChild);
   }
 
+  // ミッション進捗を復元
+  const prog = missionProgress[candidate.id]||{};
+  xp = 0;
+  missions.forEach(m=>{
+    const p = prog[m.id];
+    if(p && p.done){
+      m.done = true;
+      m.submittedFile = p.submittedFile||null;
+      xp += p.xp||m.xp;
+    } else {
+      m.done = false;
+      m.submittedFile = null;
+    }
+  });
   nav('missions', document.getElementById('nav-missions'));
 }
 

@@ -576,7 +576,7 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 
   <!-- スケジュール設定 -->
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <div class="card-head">
       <h2>🗓 入社スケジュール</h2>
       <button class="btn btn-primary btn-sm" onclick="openSettingModal('schedule')">+ 追加</button>
@@ -585,6 +585,20 @@ tbody tr:hover td{background:var(--s2)}
       <table>
         <thead><tr><th>月</th><th>日</th><th>タイトル</th><th>詳細</th><th>種別</th><th>操作</th></tr></thead>
         <tbody id="settings-schedule-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 週報・お知らせ設定 -->
+  <div class="card">
+    <div class="card-head">
+      <h2>📰 週報・お知らせ</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSettingModal('news')">+ 追加</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>カテゴリ</th><th>タイトル</th><th>担当者</th><th>日付</th><th>操作</th></tr></thead>
+        <tbody id="settings-news-table"></tbody>
       </table>
     </div>
   </div>
@@ -1040,20 +1054,10 @@ async function renderNews(){
       <div class="news-kicker" style="color:${catColors[hero.cat]||'#888'}">${hero.cat}${hero.isNew?' <span class="new-tag">NEW</span>':''}</div>
       <div class="news-headline">${hero.title}</div>
       <div class="news-body">${hero.body}</div>
-      <div class="news-byline" style="display:flex;align-items:center;justify-content:space-between">
-        <span>👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</span>
-        ${isAdmin?`<div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm" onclick="openEditNews(${hero.id})">✏️ 編集</button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteNews(${hero.id})">🗑 削除</button>
-        </div>`:''}
-      </div>`;
-    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item" style="align-items:center">
+      <div class="news-byline">👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</div>`;
+    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item">
       <div class="ni-num">0${i+1}</div>
-      <div style="flex:1"><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
-      ${isAdmin?`<div style="display:flex;gap:4px;flex-shrink:0">
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openEditNews(${a.id})">✏️</button>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteNews(${a.id})">🗑</button>
-      </div>`:''}
+      <div><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
     </div>`).join('');
   }
   const ns=document.getElementById('news-sched');
@@ -1612,6 +1616,19 @@ function renderSettings(){
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedule',${s.id})">🗑</button>
     </td>
   </tr>`).join('');
+
+  // 週報一覧
+  const sortedArticles=[...articles].sort((a,b)=>b.id-a.id);
+  document.getElementById('settings-news-table').innerHTML=sortedArticles.map(a=>`<tr>
+    <td><span style="font-size:10px;font-weight:700;color:${catColors[a.cat]||'#888'}">${a.cat}</span></td>
+    <td><strong>${a.title}</strong></td>
+    <td style="color:var(--text2);font-size:12px">${a.author}</td>
+    <td style="color:var(--text2);font-size:12px">${a.date}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="openSettingModal('news',${a.id})">✏️ 編集</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('news',${a.id})">🗑</button>
+    </td>
+  </tr>`).join('');
 }
 
 function openSettingModal(type, id=null){
@@ -1665,6 +1682,29 @@ function openSettingModal(type, id=null){
         <div class="field"><label>ラベル</label><input id="sm-taglabel" value="${data?data.tagLabel:''}" placeholder="必須参加"></div>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="saveSetting('schedule',${id||'null'})">保存する</button>`;
+  }
+  } else if(type==='news'){
+    data = id ? articles.find(x=>x.id===id) : null;
+    title.textContent = data ? '記事を編集' : '記事を追加';
+    body.innerHTML=`
+      <div class="form-grid">
+        <div class="field"><label>カテゴリ</label><select id="sm-cat">
+          <option ${data&&data.cat==='お知らせ'?'selected':''}>お知らせ</option>
+          <option ${data&&data.cat==='社長メッセージ'?'selected':''}>社長メッセージ</option>
+          <option ${data&&data.cat==='イベント'?'selected':''}>イベント</option>
+          <option ${data&&data.cat==='制度・福利厚生'?'selected':''}>制度・福利厚生</option>
+          <option ${data&&data.cat==='文化'?'selected':''}>文化</option>
+        </select></div>
+        <div class="field"><label>重要度</label><select id="sm-imp">
+          <option value="normal" ${!data||data.imp==='normal'?'selected':''}>通常</option>
+          <option value="important" ${data&&data.imp==='important'?'selected':''}>重要</option>
+          <option value="urgent" ${data&&data.imp==='urgent'?'selected':''}>至急</option>
+        </select></div>
+        <div class="field form-full"><label>タイトル</label><input id="sm-title" value="${data?data.title:''}" placeholder="タイトルを入力"></div>
+        <div class="field form-full"><label>本文</label><textarea id="sm-desc" rows="4">${data?data.body:''}</textarea></div>
+        <div class="field form-full"><label>担当者名</label><input id="sm-author" value="${data?data.author:'採用担当'}" placeholder="採用担当 田村 さくら"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveSetting('news',${id||'null'})">保存する</button>`;
   }
   modal.classList.add('open');
 }
@@ -1733,8 +1773,33 @@ async function saveSetting(type, id){
     }
     await dbUpsert('schedules', record);
   }
+  } else if(type==='news'){
+    const today = new Date().toLocaleDateString('ja-JP');
+    const record = {
+      cat: document.getElementById('sm-cat').value,
+      imp: document.getElementById('sm-imp').value,
+      title: document.getElementById('sm-title').value.trim(),
+      body: document.getElementById('sm-desc').value.trim(),
+      author: document.getElementById('sm-author').value||'採用担当',
+      is_new: true,
+    };
+    if(!record.title||!record.body) return;
+    if(id && id!=='null'){
+      record.id = id;
+      const a = articles.find(x=>x.id===id);
+      if(a){ a.cat=record.cat; a.imp=record.imp; a.title=record.title; a.body=record.body; a.author=record.author; a.isNew=true; }
+      record.date = a ? a.date : today;
+      record.is_new = a ? (a.isNew||false) : true;
+    } else {
+      record.id = Date.now();
+      record.date = today;
+      articles.push({...record, isNew:record.is_new});
+    }
+    await dbUpsert('articles', record);
+  }
   closeSettingModal();
   renderSettings();
+  renderNews().catch(()=>{});
   showToast('✅ 保存しました');
 }
 
@@ -1753,6 +1818,11 @@ async function deleteSetting(type, id){
     const idx = schedules.findIndex(x=>x.id===id);
     if(idx>-1) schedules.splice(idx,1);
     await dbDelete('schedules', id);
+  } else if(type==='news'){
+    const idx = articles.findIndex(x=>x.id===id);
+    if(idx>-1) articles.splice(idx,1);
+    await dbDelete('articles', id);
+    renderNews().catch(()=>{});
   }
   renderSettings();
   showToast('🗑 削除しました');

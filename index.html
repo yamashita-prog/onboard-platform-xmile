@@ -340,10 +340,6 @@ tbody tr:hover td{background:var(--s2)}
   </div>
   <div class="topbar-right">
     <div class="notif-btn">🔔<div class="notif-dot"></div></div>
-    <div class="user-chip">
-      <div class="user-avatar">田</div>
-      <div class="user-name" id="topbar-name">田村 さくら（HR）</div>
-    </div>
   </div>
 </div>
 
@@ -387,9 +383,9 @@ tbody tr:hover td{background:var(--s2)}
     <div class="page-sub" id="dash-sub">2025年度 新卒内定者の入社準備状況</div>
   </div>
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ 確定</span></div><div class="stat-val" style="color:var(--accent)">4</div><div class="stat-lbl">内定承諾者</div></div>
-    <div class="stat-card"><div class="stat-top"><span class="stat-icon">📄</span><span class="stat-trend" style="color:var(--amber)">68%</span></div><div class="stat-val" style="color:var(--green)">11</div><div class="stat-lbl">書類提出済み / 16</div></div>
-    <div class="stat-card"><div class="stat-top"><span class="stat-icon">⚠️</span><span class="stat-trend" style="color:var(--red)">要対応</span></div><div class="stat-val" style="color:var(--amber)">7</div><div class="stat-lbl">未完了タスク</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="stat-icon">👥</span><span class="stat-trend">↑ 確定</span></div><div class="stat-val" style="color:var(--accent)" id="stat-total">0</div><div class="stat-lbl">内定承諾者</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="stat-icon">📄</span><span class="stat-trend" style="color:var(--amber)" id="stat-doc-pct">0%</span></div><div class="stat-val" style="color:var(--green)" id="stat-doc-done">0</div><div class="stat-lbl" id="stat-doc-lbl">書類提出済み / 0</div></div>
+    <div class="stat-card"><div class="stat-top"><span class="stat-icon">⚠️</span><span class="stat-trend" style="color:var(--red)">要対応</span></div><div class="stat-val" style="color:var(--amber)" id="stat-risk">0</div><div class="stat-lbl">未完了タスク</div></div>
     <div class="stat-card"><div class="stat-top"><span class="stat-icon">📅</span></div><div class="stat-val" style="font-size:16px;padding-top:6px">内定式</div><div class="stat-lbl">5月15日（木）</div></div>
   </div>
   <div class="two-col">
@@ -743,7 +739,7 @@ function setMode(m){
     document.getElementById('nav-dashboard').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('lbl-main').style.display='block';
-    document.getElementById('topbar-name').textContent='田村 さくら（HR）';
+    
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
     document.getElementById('sf-av').textContent='田';
@@ -756,7 +752,7 @@ function setMode(m){
     document.getElementById('nav-dashboard').style.display='none';
     document.getElementById('nav-team').style.display='none';
     document.getElementById('lbl-main').style.display='none';
-    document.getElementById('topbar-name').textContent='田中 花子';
+    
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
     document.getElementById('sf-av').textContent='花';
@@ -783,6 +779,17 @@ function nav(page,el){
 
 // ═══════════ DASHBOARD ═══════════
 function renderDashboard(){
+  // ── stat cards ──
+  const total = candidates.length;
+  const totalDocs = candidates.reduce((s,c)=>s+(c.docs?c.docs.length:0), 0);
+  const doneDocs = candidates.reduce((s,c)=>s+(c.docs?c.docs.filter(d=>d.done).length:0), 0);
+  const pct = totalDocs > 0 ? Math.round(doneDocs/totalDocs*100) : 0;
+  const riskCount = candidates.filter(c=>c.status==='risk').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-doc-done').textContent = doneDocs;
+  document.getElementById('stat-doc-lbl').textContent = `書類提出済み / ${totalDocs}`;
+  document.getElementById('stat-doc-pct').textContent = pct + '%';
+  document.getElementById('stat-risk').textContent = riskCount;
   const tbody=document.getElementById('dash-table');
   tbody.innerHTML=candidates.slice(0,3).map(c=>`<tr onclick="openCand(${c.id})">
     <td><strong>${c.name}</strong></td>
@@ -961,12 +968,22 @@ async function addNews(){
   const title=document.getElementById('an-title').value.trim();
   const body=document.getElementById('an-body').value.trim();
   if(!title||!body) return;
-  articles.push({id:Date.now(),cat:document.getElementById('an-cat').value,title,body,author:document.getElementById('an-author').value||'採用担当',date:'今日',isNew:true,imp:document.getElementById('an-imp').value});
+  const today=new Date().toLocaleDateString('ja-JP');
+  const record={
+    id: Date.now(),
+    cat: document.getElementById('an-cat').value,
+    title, body,
+    author: document.getElementById('an-author').value||'採用担当',
+    date: today,
+    is_new: true,
+    imp: document.getElementById('an-imp').value
+  };
+  articles.push({...record, isNew:true});
   ['an-title','an-body','an-author'].forEach(id=>document.getElementById(id).value='');
   closeAddNewsModal();
-  await dbUpsert('articles', articles[articles.length-1]);
+  await dbUpsert('articles', record);
   renderNews();
-  showToast('📰 記事を追加しました');
+  showToast('記事を追加しました');
 }
 
 // ═══════════ MISSIONS ═══════════
@@ -1492,7 +1509,7 @@ function goAdminMode(){
   document.getElementById('nav-team').style.display='flex';
   document.getElementById('lbl-main').style.display='block';
   document.getElementById('add-news-btn').style.display='inline-flex';
-  document.getElementById('topbar-name').textContent='田村 さくら（HR）';
+  
   document.getElementById('sf-name').textContent='田村 さくら';
   document.getElementById('sf-role').textContent='採用担当';
   document.getElementById('sf-av').textContent='田';

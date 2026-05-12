@@ -1682,7 +1682,6 @@ function openSettingModal(type, id=null){
         <div class="field"><label>ラベル</label><input id="sm-taglabel" value="${data?data.tagLabel:''}" placeholder="必須参加"></div>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="saveSetting('schedule',${id||'null'})">保存する</button>`;
-  }
   } else if(type==='news'){
     data = id ? articles.find(x=>x.id===id) : null;
     title.textContent = data ? '記事を編集' : '記事を追加';
@@ -1772,7 +1771,6 @@ async function saveSetting(type, id){
       schedules.push({id:record.id, month:record.month, day:record.day, title:record.title, detail:record.detail, tag:record.tag, tagLabel:record.tag_label});
     }
     await dbUpsert('schedules', record);
-  }
   } else if(type==='news'){
     const today = new Date().toLocaleDateString('ja-JP');
     const record = {

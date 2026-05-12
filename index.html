@@ -292,9 +292,44 @@ tbody tr:hover td{background:var(--s2)}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--s2)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ── LOGIN ── */
+.login-overlay{position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:40px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,80,140,.10)}
+.login-logo{font-family:'Fraunces',serif;font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:6px}
+.login-sub{text-align:center;font-size:13px;color:var(--text2);margin-bottom:32px}
+.login-label{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:6px;display:block}
+.login-input{width:100%;font-family:'Noto Sans JP',sans-serif;font-size:14px;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;outline:none;transition:border-color .2s;margin-bottom:12px}
+.login-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:12px;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:all .2s;margin-top:4px}
+.login-btn:hover{background:#1568a3}
+.login-err{font-size:12px;color:var(--red);margin-bottom:12px;padding:9px 12px;background:rgba(220,38,38,.07);border-radius:8px;display:none}
+.login-err.show{display:block}
+.login-mode-switch{text-align:center;margin-top:20px;font-size:12px;color:var(--text2)}
+.login-mode-switch a{color:var(--accent);cursor:pointer;font-weight:600;text-decoration:none}
+.login-new-pass{background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
+.login-new-pass.show{display:block}
 </style>
 </head>
 <body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">Onboard.</div>
+    <div class="login-sub">内定者ログイン</div>
+    <div class="login-new-pass" id="login-new-pass-msg">🎉 初回ログインです！パスワードを設定してください。</div>
+    <div class="login-err" id="login-err"></div>
+    <label class="login-label">メールアドレス</label>
+    <input class="login-input" id="login-email" type="email" placeholder="your@email.com" oninput="loginErrHide()">
+    <div id="login-pass-wrap">
+      <label class="login-label" id="login-pass-label">パスワード</label>
+      <input class="login-input" id="login-password" type="password" placeholder="パスワードを入力" oninput="loginErrHide()" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()">ログイン</button>
+    <div class="login-mode-switch"><a onclick="goAdminMode()">管理者の方はこちら →</a></div>
+  </div>
+</div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -318,15 +353,18 @@ tbody tr:hover td{background:var(--s2)}
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-section">
-    <div class="sidebar-label">メイン</div>
-    <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">🏠</span><span class="nav-label">ダッシュボード</span></div>
+    <!-- ★ id="lbl-main" を追加 -->
+    <div class="sidebar-label" id="lbl-main">メイン</div>
+    <!-- ★ id="nav-dashboard" を追加 -->
+    <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard',this)"><span class="nav-icon">🏠</span><span class="nav-label">ダッシュボード</span></div>
     <div class="nav-item" onclick="nav('candidates',this)" id="nav-candidates"><span class="nav-icon">👥</span><span class="nav-label">内定者管理</span><span class="nav-badge">4</span></div>
     <div class="nav-item" onclick="nav('team',this)" id="nav-team"><span class="nav-icon">🧑‍💼</span><span class="nav-label">担当者管理</span></div>
     <div class="nav-item" onclick="nav('news',this)"><span class="nav-icon">📰</span><span class="nav-label">週報・お知らせ</span><span class="nav-badge red">新</span></div>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">内定者向け</div>
-    <div class="nav-item" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
+    <!-- ★ id="nav-missions" を追加 -->
+    <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
     <div class="nav-item" onclick="nav('timeline',this)"><span class="nav-icon">🗓</span><span class="nav-label">入社スケジュール</span></div>
   </div>
@@ -384,7 +422,7 @@ tbody tr:hover td{background:var(--s2)}
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>氏名</th><th>大学・学部</th><th>配属予定</th><th>書類進捗</th><th>ステータス</th></tr></thead>
+        <thead><tr><th>氏名</th><th>大学・学部</th><th>配属予定</th><th>書類進捗</th><th>ステータス</th><th>操作</th></tr></thead>
         <tbody id="cand-table"></tbody>
       </table>
     </div>
@@ -579,7 +617,6 @@ const LEVELS=[
 const catColors={'お知らせ':'#f87171','社長メッセージ':'#5b8aff','イベント':'#20d49a','制度・福利厚生':'#a855f7','文化':'#f59e0b'};
 
 let candidates=[];
-
 let articles=[];
 
 const schedules=[
@@ -623,7 +660,6 @@ const ranking=[
   {name:'鈴木 大輝',avatar:'🎯',lv:2,xp:180,me:false},
 ];
 
-// schedule booking state
 const schedTypes=[
   {id:'onboarding',icon:'🏢',name:'入社前オリエンテーション',desc:'入社準備・書類・配属について確認',dur:'60分'},
   {id:'question',icon:'💬',name:'不安・質問相談',desc:'入社前の不安や疑問を気軽に相談',dur:'30分'},
@@ -680,8 +716,6 @@ async function dbDelete(table, id){
   });
 }
 
-async function saveAll(){}  // Supabase版では個別保存するので不要
-
 async function loadAll(){
   try{
     const [r, c, a] = await Promise.all([
@@ -689,8 +723,6 @@ async function loadAll(){
       dbFetch('candidates').catch(e=>{console.error('candidates fetch error:',e);return [];}),
       dbFetch('articles').catch(e=>{console.error('articles fetch error:',e);return [];}),
     ]);
-    console.log('DB data:', r, c, a);
-    // Supabaseにデータがあれば完全に上書き
     if(r && r.length > 0) recruiters = r;
     if(c && c.length > 0) candidates = c;
     if(a && a.length > 0) articles = a.map(x=>({...x, isNew: x.is_new}));
@@ -698,6 +730,7 @@ async function loadAll(){
 }
 
 // ═══════════ MODE ═══════════
+// ★★★ ここが今回の変更箇所 ★★★
 let isAdmin=true;
 function setMode(m){
   isAdmin=(m==='admin');
@@ -705,29 +738,32 @@ function setMode(m){
   document.getElementById('mode-user').classList.toggle('active',!isAdmin);
   const navCands=document.getElementById('nav-candidates');
   if(isAdmin){
+    // 管理者モード：全メニューを再表示してダッシュボードへ
     navCands.style.display='flex';
+    document.getElementById('nav-dashboard').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
+    document.getElementById('lbl-main').style.display='block';
     document.getElementById('topbar-name').textContent='田村 さくら（HR）';
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
     document.getElementById('sf-av').textContent='田';
-    document.querySelector('.sf-av').style.background='linear-gradient(135deg,var(--accent),var(--accent2))';
+    document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--accent),var(--accent2))';
     document.getElementById('add-news-btn').style.display='inline-flex';
-    document.getElementById('dash-title').textContent='採用管理ダッシュボード';
-    document.getElementById('dash-sub').textContent='2025年度 新卒内定者の入社準備状況';
+    nav('dashboard', document.getElementById('nav-dashboard'));
   } else {
+    // 内定者モード：管理者メニューを非表示にしてミッション画面へ直接遷移
     navCands.style.display='none';
+    document.getElementById('nav-dashboard').style.display='none';
     document.getElementById('nav-team').style.display='none';
+    document.getElementById('lbl-main').style.display='none';
     document.getElementById('topbar-name').textContent='田中 花子';
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
     document.getElementById('sf-av').textContent='花';
-    document.querySelector('.sf-av').style.background='linear-gradient(135deg,var(--green),#059669)';
+    document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--green),#059669)';
     document.getElementById('add-news-btn').style.display='none';
-    document.getElementById('dash-title').textContent='マイページ';
-    document.getElementById('dash-sub').textContent='田中 花子さんの入社準備ダッシュボード';
+    nav('missions', document.getElementById('nav-missions'));
   }
-  nav('dashboard',document.querySelector('.nav-item'));
 }
 
 // ═══════════ NAV ═══════════
@@ -747,21 +783,18 @@ function nav(page,el){
 
 // ═══════════ DASHBOARD ═══════════
 function renderDashboard(){
-  // table
   const tbody=document.getElementById('dash-table');
   tbody.innerHTML=candidates.slice(0,3).map(c=>`<tr onclick="openCand(${c.id})">
     <td><strong>${c.name}</strong></td>
     <td><div style="display:flex;align-items:center;gap:6px"><div class="prog-wrap"><div class="prog-bar" style="width:${c.progress}%"></div></div><span style="font-size:11px;color:var(--text2)">${c.progress}%</span></div></td>
     <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
   </tr>`).join('');
-  // news
   const news=document.getElementById('dash-news');
   news.innerHTML=articles.slice(0,3).map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="nav('news',document.querySelector('[onclick*=news]'))">
     <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${catColors[a.cat]||'#888'};margin-bottom:3px">${a.cat}${a.isNew?' <span style="background:var(--red);color:#fff;font-size:8px;padding:1px 4px;border-radius:2px">NEW</span>':''}</div>
     <div style="font-size:13px;font-weight:600;margin-bottom:2px">${a.title}</div>
     <div style="font-size:11px;color:var(--text3)">${a.date}</div>
   </div>`).join('');
-  // sched
   const ds=document.getElementById('dash-sched');
   ds.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
 }
@@ -780,7 +813,19 @@ function renderCandidates(){
     <td style="color:var(--text2)">${c.dept}</td>
     <td><div style="display:flex;align-items:center;gap:8px"><div class="prog-wrap"><div class="prog-bar" style="width:${c.progress}%"></div></div><span style="font-size:11px;color:var(--text2)">${c.progress}%</span></div></td>
     <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
+    <td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteCandidate(${c.id})">削除</button></td>
   </tr>`).join('');
+}
+
+async function deleteCandidate(id){
+  const c=candidates.find(x=>x.id===id);
+  if(!confirm(`「${c.name}」を削除しますか？`)) return;
+  const idx=candidates.findIndex(x=>x.id===id);
+  if(idx>-1) candidates.splice(idx,1);
+  await dbDelete('candidates', id);
+  renderCandidates();
+  renderDashboard();
+  showToast('🗑 内定者を削除しました');
 }
 
 function openCand(id){
@@ -835,7 +880,6 @@ let pressReleases = [];
 async function fetchPressReleases(){
   try{
     const RSS_URL = 'https://prtimes.jp/companyrdf.php?company_id=63503';
-    // 複数のプロキシを試す
     const proxies = [
       `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,
       `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
@@ -904,7 +948,6 @@ async function renderNews(){
     <div class="faq-q" onclick="toggleFaq(${i})"><span class="faq-qmark">Q</span><span style="flex:1">${f.q}</span><span class="faq-chevron">▼</span></div>
     <div class="faq-a"><div class="faq-a-inner">${f.a}</div></div>
   </div>`).join('');
-  // プレスリリース取得・表示
   renderPressReleases();
   await fetchPressReleases();
   renderPressReleases();
@@ -994,7 +1037,7 @@ function openMission(id){
         <div style="font-size:10px;color:var(--text3);margin-top:4px">PDF, Word (.docx), テキスト対応</div>
       </div>
       <input type="file" id="file-input-${m.id}" accept=".pdf,.doc,.docx,.txt" style="display:none" onchange="handleFileSelect(event,${m.id})">
-      <div id="file-preview-${m.id}" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:none;align-items:center;gap:10px">
+      <div id="file-preview-${m.id}" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px">
         <span style="font-size:18px">📄</span>
         <span id="file-name-${m.id}" style="font-size:13px;flex:1"></span>
         <span onclick="clearFile(${m.id})" style="cursor:pointer;color:var(--text3);font-size:14px">✕</span>
@@ -1102,13 +1145,12 @@ async function completeMission(id){
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
 // ═══════════ SCHEDULE BOOKING (Google Calendar連携) ═══════════
-// リクルーターのGoogleカレンダーから空き時間を取得してスロットを生成する
-let gcalSlots = {}; // { 'YYYY-MM-DD': [{time:'10:00', available:true}, ...] }
+let gcalSlots = {};
 let loadingSlots = false;
 
 async function fetchAvailability(recruiter, date) {
   const key = dk(date);
-  if (gcalSlots[key] !== undefined) return; // キャッシュ済み
+  if (gcalSlots[key] !== undefined) return;
   loadingSlots = true;
   renderSchedStep();
 
@@ -1143,7 +1185,6 @@ ${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得�
     const parsed = JSON.parse(clean);
     gcalSlots[key] = parsed.slots;
   } catch(e) {
-    // カレンダー取得失敗時はデフォルトスロットを表示
     const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
     gcalSlots[key] = base.map(t => ({ time: t, available: true }));
   }
@@ -1153,7 +1194,6 @@ ${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得�
 
 async function submitToCalendar(recruiter, date, slot, type) {
   try {
-    const dows = ['日','月','火','水','木','金','土'];
     const startDt = new Date(date);
     const [h, m] = slot.split(':').map(Number);
     startDt.setHours(h, m, 0, 0);
@@ -1231,7 +1271,7 @@ function renderSchedStep(){
       const dateLabel=`${sBook.date.getMonth()+1}月${sBook.date.getDate()}日（${dow}）`;
       if(loadingSlots){
         slotsHtml=`<div style="text-align:center;padding:24px;color:var(--text2)">
-          <div style="font-size:20px;margin-bottom:8px;animation:spin 1s linear infinite;display:inline-block">🔄</div>
+          <div style="font-size:20px;margin-bottom:8px">🔄</div>
           <div style="font-size:13px">${recruiters.find(r=>r.id===sBook.rec)?.name}のGoogleカレンダーを確認中...</div>
         </div>`;
       } else if(gcalSlots[key]){
@@ -1353,17 +1393,144 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),3000);
 }
 
+// ═══════════ LOGIN ═══════════
+let loggedInCandidate = null;
+
+function loginErrHide(){
+  document.getElementById('login-err').classList.remove('show');
+}
+
+function loginErr(msg){
+  const el = document.getElementById('login-err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+
+  if(!email){ loginErr('メールアドレスを入力してください'); return; }
+  if(!password){ loginErr('パスワードを入力してください'); return; }
+
+  // candidatesからメール照合
+  const candidate = candidates.find(c => (c.email||'').toLowerCase() === email);
+  if(!candidate){ loginErr('このメールアドレスは登録されていません'); return; }
+
+  if(!candidate.password){
+    // 初回ログイン：パスワードを設定して保存
+    candidate.password = password;
+    await dbUpsert('candidates', {...candidate});
+    loginSuccess(candidate);
+  } else {
+    // 2回目以降：パスワード照合
+    if(candidate.password !== password){
+      loginErr('パスワードが違います');
+      return;
+    }
+    loginSuccess(candidate);
+  }
+}
+
+function loginSuccess(candidate){
+  loggedInCandidate = candidate;
+  document.getElementById('login-overlay').style.display = 'none';
+  document.querySelector('.topbar').style.display='flex';
+  document.querySelector('.body-wrap').style.display='flex';
+
+  // 内定者モードで表示
+  document.getElementById('nav-candidates').style.display='none';
+  document.getElementById('nav-dashboard').style.display='none';
+  document.getElementById('nav-team').style.display='none';
+  document.getElementById('lbl-main').style.display='none';
+  document.getElementById('add-news-btn').style.display='none';
+  document.getElementById('mode-admin').style.display='none';
+  document.getElementById('mode-user').style.display='none';
+
+  // 右上の名前を更新
+  document.getElementById('topbar-name').textContent = candidate.name;
+  document.getElementById('sf-name').textContent = candidate.name;
+  document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';
+  document.getElementById('sf-av').textContent = candidate.name.charAt(0);
+  document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--green),#059669)';
+
+  // ログアウトボタンを追加
+  const topbarRight = document.querySelector('.topbar-right');
+  if(!document.getElementById('logout-btn')){
+    const btn = document.createElement('button');
+    btn.id = 'logout-btn';
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.textContent = 'ログアウト';
+    btn.onclick = doLogout;
+    topbarRight.insertBefore(btn, topbarRight.firstChild);
+  }
+
+  nav('missions', document.getElementById('nav-missions'));
+}
+
+function doLogout(){
+  loggedInCandidate = null;
+  document.getElementById('login-overlay').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-new-pass-msg').classList.remove('show');
+  loginErrHide();
+  // モード切替ボタンを戻す
+  document.getElementById('mode-admin').style.display='';
+  document.getElementById('mode-user').style.display='';
+}
+
+function goAdminMode(){
+  document.getElementById('login-overlay').style.display = 'none';
+  document.querySelector('.topbar').style.display='flex';
+  document.querySelector('.body-wrap').style.display='flex';
+  isAdmin = true;
+  document.getElementById('mode-admin').classList.add('active');
+  document.getElementById('mode-user').classList.remove('active');
+  document.getElementById('nav-candidates').style.display='flex';
+  document.getElementById('nav-dashboard').style.display='flex';
+  document.getElementById('nav-team').style.display='flex';
+  document.getElementById('lbl-main').style.display='block';
+  document.getElementById('add-news-btn').style.display='inline-flex';
+  document.getElementById('topbar-name').textContent='田村 さくら（HR）';
+  document.getElementById('sf-name').textContent='田村 さくら';
+  document.getElementById('sf-role').textContent='採用担当';
+  document.getElementById('sf-av').textContent='田';
+  document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--accent),var(--accent2))';
+
+  // 管理者からログアウトボタンを削除・内定者ログインに戻るボタン追加
+  const lb = document.getElementById('logout-btn');
+  if(lb) lb.remove();
+  const topbarRight = document.querySelector('.topbar-right');
+  if(!document.getElementById('back-to-login-btn')){
+    const btn = document.createElement('button');
+    btn.id = 'back-to-login-btn';
+    btn.className = 'btn btn-ghost btn-sm';
+    btn.textContent = '← 内定者ログイン';
+    btn.onclick = backToLogin;
+    topbarRight.insertBefore(btn, topbarRight.firstChild);
+  }
+
+  nav('dashboard', document.getElementById('nav-dashboard'));
+}
+
+function backToLogin(){
+  const b = document.getElementById('back-to-login-btn');
+  if(b) b.remove();
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
 // ═══════════ INIT ═══════════
 async function init(){
   const loading = document.createElement('div');
-  loading.id = 'loading-overlay';
-  loading.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text2);gap:10px;font-family:Noto Sans JP,sans-serif';
-  loading.innerHTML = '<div style="animation:spin 1s linear infinite;display:inline-block;font-size:20px">🔄</div> データを読み込み中...';
+  loading.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text2);gap:10px;font-family:Noto Sans JP,sans-serif';
+  loading.innerHTML = '<div style="font-size:20px">🔄</div> 読み込み中...';
   document.body.appendChild(loading);
   await loadAll();
-  console.log('loaded recruiters:', recruiters.length, 'candidates:', candidates.length, 'articles:', articles.length);
   document.body.removeChild(loading);
-  renderDashboard();
+  // 起動時はログイン画面を表示（管理者画面は非表示）
+  document.querySelector('.topbar').style.display='none';
+  document.querySelector('.body-wrap').style.display='none';
 }
 init();
 </script>

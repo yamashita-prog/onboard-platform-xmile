@@ -356,6 +356,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="nav-item" onclick="nav('candidates',this)" id="nav-candidates"><span class="nav-icon">👥</span><span class="nav-label">内定者管理</span><span class="nav-badge">4</span></div>
     <div class="nav-item" onclick="nav('team',this)" id="nav-team"><span class="nav-icon">🧑‍💼</span><span class="nav-label">担当者管理</span></div>
     <div class="nav-item" onclick="nav('news',this)"><span class="nav-icon">📰</span><span class="nav-label">週報・お知らせ</span><span class="nav-badge red">新</span></div>
+    <div class="nav-item" onclick="nav('settings',this)" id="nav-settings"><span class="nav-icon">⚙️</span><span class="nav-label">設定</span></div>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">内定者向け</div>
@@ -462,7 +463,7 @@ tbody tr:hover td{background:var(--s2)}
   </div>
   <div class="xp-bar-wrap">
     <div class="xp-bar-top">
-      <div><div class="xp-lv" id="xp-lv">Lv.3 ライジング</div><div style="font-size:11px;color:var(--text2);margin-top:2px" id="xp-name-label">田中 花子</div></div>
+      <div><div class="xp-lv" id="xp-lv">Lv.3 ライジング</div><div style="font-size:11px;color:var(--text2);margin-top:2px" id="xp-name-label"></div></div>
       <div style="display:flex;gap:10px">
         <div style="text-align:center"><div style="font-size:18px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--green)" id="stat-done">3</div><div style="font-size:10px;color:var(--text2)">完了</div></div>
         <div style="text-align:center"><div style="font-size:18px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--amber)" id="stat-xp">350</div><div style="font-size:10px;color:var(--text2)">XP</div></div>
@@ -538,6 +539,57 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
+<!-- ===== SETTINGS ===== -->
+<div class="page" id="page-settings">
+  <div class="page-header">
+    <div class="page-eyebrow">Settings</div>
+    <div class="page-title">設定</div>
+    <div class="page-sub">ミッション・面談種類・スケジュールの管理</div>
+  </div>
+
+  <!-- ミッション設定 -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head">
+      <h2>🎯 入社前ミッション</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSettingModal('mission')">+ 追加</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>アイコン</th><th>タイトル</th><th>カテゴリ</th><th>XP</th><th>提出方法</th><th>操作</th></tr></thead>
+        <tbody id="settings-mission-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 面談種類設定 -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head">
+      <h2>📅 面談種類</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSettingModal('schedtype')">+ 追加</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>アイコン</th><th>名前</th><th>説明</th><th>時間</th><th>操作</th></tr></thead>
+        <tbody id="settings-schedtype-table"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- スケジュール設定 -->
+  <div class="card">
+    <div class="card-head">
+      <h2>🗓 入社スケジュール</h2>
+      <button class="btn btn-primary btn-sm" onclick="openSettingModal('schedule')">+ 追加</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>月</th><th>日</th><th>タイトル</th><th>詳細</th><th>種別</th><th>操作</th></tr></thead>
+        <tbody id="settings-schedule-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </div><!-- /main -->
 </div><!-- /body-wrap -->
 
@@ -597,6 +649,17 @@ tbody tr:hover td{background:var(--s2)}
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="addTeamMember()">保存する</button>
     </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="setting-modal" onclick="closeSettingModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="setting-modal-title">追加</div>
+      <button class="modal-close" onclick="closeSettingModal()">✕</button>
+    </div>
+    <div class="modal-body" id="setting-modal-body"></div>
   </div>
 </div>
 
@@ -712,27 +775,47 @@ async function dbDelete(table, id){
   });
 }
 
-// ミッション進捗データ（candidate_id -> {mission_id: {done, submitted_file, xp}}）
+// ミッション進捗データ
 let missionProgress = {};
 
 async function loadAll(){
   try{
-    const [r, c, a, mp] = await Promise.all([
-      dbFetch('recruiters').catch(e=>{console.error('recruiters fetch error:',e);return [];}),
-      dbFetch('candidates').catch(e=>{console.error('candidates fetch error:',e);return [];}),
-      dbFetch('articles').catch(e=>{console.error('articles fetch error:',e);return [];}),
-      dbFetch('missions').catch(e=>{console.error('missions fetch error:',e);return [];}),
+    const [r, c, a, mp, mt, st, sc] = await Promise.all([
+      dbFetch('recruiters').catch(()=>[]),
+      dbFetch('candidates').catch(()=>[]),
+      dbFetch('articles').catch(()=>[]),
+      dbFetch('missions').catch(()=>[]),
+      dbFetch('mission_templates').catch(()=>[]),
+      dbFetch('schedule_types').catch(()=>[]),
+      dbFetch('schedules').catch(()=>[]),
     ]);
     if(r && r.length > 0) recruiters = r;
     if(c && c.length > 0) candidates = c;
     if(a && a.length > 0) articles = a.map(x=>({...x, isNew: x.is_new}));
-    // ミッション進捗をcandidate_idでまとめる
     if(mp && mp.length > 0){
       missionProgress = {};
       mp.forEach(row => {
         if(!missionProgress[row.candidate_id]) missionProgress[row.candidate_id] = {};
         missionProgress[row.candidate_id][row.mission_id] = {done: row.done, submittedFile: row.submitted_file, xp: row.xp};
       });
+    }
+    // Supabaseからミッション定義を上書き
+    if(mt && mt.length > 0){
+      missions = mt.map(m=>({
+        id: m.id, icon: m.icon||'📋', title: m.title, desc: m.description||'',
+        cat: m.cat||'', xp: m.xp||0, done: false, stamp: '✅',
+        locked: false, submitType: m.submit_type||'check', submittedFile: null
+      }));
+    }
+    // 面談種類を上書き
+    if(st && st.length > 0){
+      schedTypes.length = 0;
+      st.forEach(s => schedTypes.push({id: String(s.id), icon: s.icon||'📅', name: s.name, desc: s.description||'', dur: s.duration||'30分'}));
+    }
+    // スケジュールを上書き
+    if(sc && sc.length > 0){
+      schedules.length = 0;
+      sc.forEach(s => schedules.push({id: s.id, month: s.month, day: s.day, title: s.title, detail: s.detail||'', tag: s.tag||'req', tagLabel: s.tag_label||''}));
     }
   } catch(e){ console.warn('loadAll error', e); }
 }
@@ -750,6 +833,7 @@ function setMode(m){
     navCands.style.display='flex';
     document.getElementById('nav-dashboard').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
+    document.getElementById('nav-settings').style.display='flex';
     document.getElementById('lbl-main').style.display='block';
     
     document.getElementById('sf-name').textContent='田村 さくら';
@@ -763,6 +847,7 @@ function setMode(m){
     navCands.style.display='none';
     document.getElementById('nav-dashboard').style.display='none';
     document.getElementById('nav-team').style.display='none';
+    document.getElementById('nav-settings').style.display='none';
     document.getElementById('lbl-main').style.display='none';
     
     document.getElementById('sf-name').textContent='田中 花子';
@@ -787,6 +872,7 @@ function nav(page,el){
   if(page==='missions') renderMissions();
   if(page==='schedule') renderSchedStep();
   if(page==='timeline') renderTimeline();
+  if(page==='settings') renderSettings();
 }
 
 // ═══════════ DASHBOARD ═══════════
@@ -1060,6 +1146,7 @@ function renderMissions(){
   const prevMax=lv.lv>1?(LEVELS[lv.lv-2].max):0;
   const pct=Math.min(100,Math.round((xp-prevMax)/(lv.max-prevMax)*100));
   document.getElementById('xp-lv').textContent=`Lv.${lv.lv} ${lv.name}`;
+  document.getElementById('xp-name-label').textContent=loggedInCandidate?loggedInCandidate.name:'';
   document.getElementById('xp-fill').style.width=pct+'%';
   document.getElementById('stat-done').textContent=missions.filter(m=>m.done).length;
   document.getElementById('stat-xp').textContent=xp;
@@ -1483,6 +1570,194 @@ function renderTimeline(){
   document.getElementById('timeline-list').innerHTML=schedules.map(s=>schedCard(s)).join('');
 }
 
+// ═══════════ SETTINGS ═══════════
+const submitTypeLabel={doc:'📄 ファイル提出',image:'📸 スクショ提出',check:'✋ 参加報告'};
+const tagOptions=[{v:'req',l:'必須参加'},{v:'dead',l:'締め切り'},{v:'opt',l:'任意参加'}];
+
+function renderSettings(){
+  // ミッション一覧
+  document.getElementById('settings-mission-table').innerHTML=missions.map(m=>`<tr>
+    <td>${m.icon}</td>
+    <td><strong>${m.title}</strong></td>
+    <td style="color:var(--text2)">${m.cat}</td>
+    <td style="font-family:'Outfit',sans-serif;font-weight:700;color:var(--amber)">${m.xp} XP</td>
+    <td style="color:var(--text2)">${submitTypeLabel[m.submitType]||m.submitType}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="openSettingModal('mission',${m.id})">✏️ 編集</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('mission',${m.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+
+  // 面談種類一覧
+  document.getElementById('settings-schedtype-table').innerHTML=schedTypes.map(s=>`<tr>
+    <td>${s.icon}</td>
+    <td><strong>${s.name}</strong></td>
+    <td style="color:var(--text2)">${s.desc}</td>
+    <td style="color:var(--text2)">${s.dur}</td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="openSettingModal('schedtype','${s.id}')">✏️ 編集</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedtype','${s.id}')">🗑</button>
+    </td>
+  </tr>`).join('');
+
+  // スケジュール一覧
+  document.getElementById('settings-schedule-table').innerHTML=schedules.map(s=>`<tr>
+    <td style="font-weight:700;color:var(--text2)">${s.month}</td>
+    <td style="font-family:'Outfit',sans-serif;font-weight:700">${s.day}</td>
+    <td><strong>${s.title}</strong></td>
+    <td style="color:var(--text2);font-size:12px">${s.detail}</td>
+    <td><span class="sched-tag t-${s.tag}">${s.tagLabel}</span></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-ghost btn-sm" onclick="openSettingModal('schedule',${s.id})">✏️ 編集</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedule',${s.id})">🗑</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openSettingModal(type, id=null){
+  const modal = document.getElementById('setting-modal');
+  const body = document.getElementById('setting-modal-body');
+  const title = document.getElementById('setting-modal-title');
+  let data = null;
+
+  if(type==='mission'){
+    data = id ? missions.find(x=>x.id===id) : null;
+    title.textContent = data ? 'ミッションを編集' : 'ミッションを追加';
+    body.innerHTML=`
+      <div class="form-grid">
+        <div class="field"><label>アイコン（絵文字）</label><input id="sm-icon" value="${data?data.icon:'📋'}" maxlength="2"></div>
+        <div class="field"><label>カテゴリ</label><input id="sm-cat" value="${data?data.cat:''}" placeholder="学習"></div>
+        <div class="field form-full"><label>タイトル</label><input id="sm-title" value="${data?data.title:''}" placeholder="ミッション名"></div>
+        <div class="field form-full"><label>説明</label><textarea id="sm-desc" rows="3">${data?data.desc:''}</textarea></div>
+        <div class="field"><label>XP</label><input id="sm-xp" type="number" value="${data?data.xp:100}"></div>
+        <div class="field"><label>提出方法</label><select id="sm-submit">
+          <option value="doc" ${data&&data.submitType==='doc'?'selected':''}>📄 ファイル提出</option>
+          <option value="image" ${data&&data.submitType==='image'?'selected':''}>📸 スクショ提出</option>
+          <option value="check" ${data&&data.submitType==='check'?'selected':''}>✋ 参加報告</option>
+        </select></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveSetting('mission',${id||'null'})">保存する</button>`;
+  } else if(type==='schedtype'){
+    data = id ? schedTypes.find(x=>String(x.id)===String(id)) : null;
+    title.textContent = data ? '面談種類を編集' : '面談種類を追加';
+    body.innerHTML=`
+      <div class="form-grid">
+        <div class="field"><label>アイコン（絵文字）</label><input id="sm-icon" value="${data?data.icon:'📅'}" maxlength="2"></div>
+        <div class="field"><label>時間</label><input id="sm-dur" value="${data?data.dur:'30分'}" placeholder="30分"></div>
+        <div class="field form-full"><label>名前</label><input id="sm-title" value="${data?data.name:''}" placeholder="面談名"></div>
+        <div class="field form-full"><label>説明</label><input id="sm-desc" value="${data?data.desc:''}" placeholder="面談の説明"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveSetting('schedtype','${id||'null'}')">保存する</button>`;
+  } else if(type==='schedule'){
+    data = id ? schedules.find(x=>x.id===id) : null;
+    title.textContent = data ? 'スケジュールを編集' : 'スケジュールを追加';
+    body.innerHTML=`
+      <div class="form-grid">
+        <div class="field"><label>月（例: MAY）</label><input id="sm-month" value="${data?data.month:''}" placeholder="JUL"></div>
+        <div class="field"><label>日（例: 15）</label><input id="sm-day" value="${data?data.day:''}" placeholder="1"></div>
+        <div class="field form-full"><label>タイトル</label><input id="sm-title" value="${data?data.title:''}" placeholder="入社日"></div>
+        <div class="field form-full"><label>詳細</label><input id="sm-detail" value="${data?data.detail:''}" placeholder="本社1階受付 9:00集合"></div>
+        <div class="field"><label>種別</label><select id="sm-tag">
+          <option value="req" ${data&&data.tag==='req'?'selected':''}>必須参加</option>
+          <option value="dead" ${data&&data.tag==='dead'?'selected':''}>締め切り</option>
+          <option value="opt" ${data&&data.tag==='opt'?'selected':''}>任意参加</option>
+        </select></div>
+        <div class="field"><label>ラベル</label><input id="sm-taglabel" value="${data?data.tagLabel:''}" placeholder="必須参加"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveSetting('schedule',${id||'null'})">保存する</button>`;
+  }
+  modal.classList.add('open');
+}
+
+function closeSettingModal(e){
+  if(!e||e.target===document.getElementById('setting-modal'))
+    document.getElementById('setting-modal').classList.remove('open');
+}
+
+async function saveSetting(type, id){
+  if(type==='mission'){
+    const record = {
+      icon: document.getElementById('sm-icon').value||'📋',
+      title: document.getElementById('sm-title').value.trim(),
+      description: document.getElementById('sm-desc').value.trim(),
+      cat: document.getElementById('sm-cat').value.trim(),
+      xp: parseInt(document.getElementById('sm-xp').value)||0,
+      submit_type: document.getElementById('sm-submit').value,
+    };
+    if(!record.title) return;
+    if(id && id!=='null'){
+      record.id = id;
+      const m = missions.find(x=>x.id===id);
+      if(m){ m.icon=record.icon; m.title=record.title; m.desc=record.description; m.cat=record.cat; m.xp=record.xp; m.submitType=record.submit_type; }
+    } else {
+      record.id = Date.now();
+      missions.push({id:record.id, icon:record.icon, title:record.title, desc:record.description, cat:record.cat, xp:record.xp, done:false, stamp:'✅', locked:false, submitType:record.submit_type, submittedFile:null});
+    }
+    await dbUpsert('mission_templates', record);
+  } else if(type==='schedtype'){
+    const record = {
+      icon: document.getElementById('sm-icon').value||'📅',
+      name: document.getElementById('sm-title').value.trim(),
+      description: document.getElementById('sm-desc').value.trim(),
+      duration: document.getElementById('sm-dur').value.trim()||'30分',
+    };
+    if(!record.name) return;
+    if(id && id!=='null'){
+      record.id = id;
+      const s = schedTypes.find(x=>String(x.id)===String(id));
+      if(s){ s.icon=record.icon; s.name=record.name; s.desc=record.description; s.dur=record.duration; }
+    } else {
+      record.id = Date.now();
+      schedTypes.push({id:String(record.id), icon:record.icon, name:record.name, desc:record.description, dur:record.duration});
+    }
+    await dbUpsert('schedule_types', record);
+  } else if(type==='schedule'){
+    const tagMap = {req:'必須参加', dead:'締め切り', opt:'任意参加'};
+    const tag = document.getElementById('sm-tag').value;
+    const record = {
+      month: document.getElementById('sm-month').value.trim().toUpperCase(),
+      day: document.getElementById('sm-day').value.trim(),
+      title: document.getElementById('sm-title').value.trim(),
+      detail: document.getElementById('sm-detail').value.trim(),
+      tag,
+      tag_label: document.getElementById('sm-taglabel').value.trim() || tagMap[tag],
+    };
+    if(!record.title) return;
+    if(id && id!=='null'){
+      record.id = id;
+      const s = schedules.find(x=>x.id===id);
+      if(s){ s.month=record.month; s.day=record.day; s.title=record.title; s.detail=record.detail; s.tag=record.tag; s.tagLabel=record.tag_label; }
+    } else {
+      record.id = Date.now();
+      schedules.push({id:record.id, month:record.month, day:record.day, title:record.title, detail:record.detail, tag:record.tag, tagLabel:record.tag_label});
+    }
+    await dbUpsert('schedules', record);
+  }
+  closeSettingModal();
+  renderSettings();
+  showToast('✅ 保存しました');
+}
+
+async function deleteSetting(type, id){
+  const labels = {mission:'ミッション', schedtype:'面談種類', schedule:'スケジュール'};
+  if(!confirm(`この${labels[type]}を削除しますか？`)) return;
+  if(type==='mission'){
+    const idx = missions.findIndex(x=>x.id===id);
+    if(idx>-1) missions.splice(idx,1);
+    await dbDelete('mission_templates', id);
+  } else if(type==='schedtype'){
+    const idx = schedTypes.findIndex(x=>String(x.id)===String(id));
+    if(idx>-1) schedTypes.splice(idx,1);
+    await dbDelete('schedule_types', id);
+  } else if(type==='schedule'){
+    const idx = schedules.findIndex(x=>x.id===id);
+    if(idx>-1) schedules.splice(idx,1);
+    await dbDelete('schedules', id);
+  }
+  renderSettings();
+  showToast('🗑 削除しました');
+}
+
 // ═══════════ TOAST ═══════════
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -1539,6 +1814,7 @@ function loginSuccess(candidate){
   document.getElementById('nav-candidates').style.display='none';
   document.getElementById('nav-dashboard').style.display='none';
   document.getElementById('nav-team').style.display='none';
+  document.getElementById('nav-settings').style.display='none';
   document.getElementById('lbl-main').style.display='none';
   document.getElementById('add-news-btn').style.display='none';
   document.getElementById('mode-admin').style.display='none';
@@ -1601,6 +1877,7 @@ function goAdminMode(){
   document.getElementById('nav-candidates').style.display='flex';
   document.getElementById('nav-dashboard').style.display='flex';
   document.getElementById('nav-team').style.display='flex';
+  document.getElementById('nav-settings').style.display='flex';
   document.getElementById('lbl-main').style.display='block';
   document.getElementById('add-news-btn').style.display='inline-flex';
   

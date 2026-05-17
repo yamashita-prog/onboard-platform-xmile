@@ -519,7 +519,7 @@ tbody tr:hover td{background:var(--s2)}
 </div>
 
 <!-- EMOJI SETUP OVERLAY -->
-<div class="login-overlay" id="emoji-overlay" style="display:none;z-index:490">
+<div class="login-overlay" id="emoji-overlay" style="display:none;z-index:510">
   <div class="login-box">
     <div class="login-logo">Onboard.</div>
     <div class="login-sub" style="margin-bottom:8px">あなたのアバター絵文字を選んでください🎉</div>
@@ -906,14 +906,14 @@ let missions=[
 ];
 
 const badges=[
-  {emoji:'🚀',name:'ファーストステップ',cond:'最初のミッション完了',earned:true},
-  {emoji:'📚',name:'読書家',cond:'学習ミッション3つ完了',earned:false},
-  {emoji:'⚡',name:'スピードスター',cond:'1日で3ミッション完了',earned:false},
-  {emoji:'🔥',name:'7日連続',cond:'7日連続ログイン',earned:false},
-  {emoji:'👑',name:'トップランカー',cond:'ランキング1位を獲得',earned:false},
-  {emoji:'🎯',name:'パーフェクト',cond:'全ミッション完了',earned:false},
-  {emoji:'💎',name:'レジェンド',cond:'Lv.6に到達',earned:false},
-  {emoji:'🌈',name:'オールラウンダー',cond:'全カテゴリ制覇',earned:false},
+  {id:'first',    emoji:'🚀', name:'ファーストステップ', cond:'最初のミッションを完了',          earned:false},
+  {id:'typing',   emoji:'⌨️', name:'タイピングマスター', cond:'寿司打ミッションを提出',           earned:false},
+  {id:'reading',  emoji:'📚', name:'読書家',             cond:'課題図書ミッションを提出',         earned:false},
+  {id:'senior',   emoji:'🎤', name:'先輩への第一歩',     cond:'座談会登壇ミッションを完了',       earned:false},
+  {id:'perfect',  emoji:'🎯', name:'パーフェクト',       cond:'全ミッションを完了',               earned:false},
+  {id:'legend',   emoji:'💎', name:'レジェンド',         cond:'ランキング5位以内に入る',          earned:false},
+  {id:'all',      emoji:'🌈', name:'オールラウンダー',   cond:'全カテゴリのミッションを制覇',     earned:false},
+  {id:'sprint',   emoji:'⚡', name:'スピードスター',     cond:'1日で3つミッションを完了',         earned:false},
 ];
 
 const ranking=[
@@ -1621,8 +1621,8 @@ function renderMissions(){
   }).sort((a,b)=>b.xp-a.xp);
   document.getElementById('rank-list').innerHTML=rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
-    <div class="rank-av">${r.me ? (r.emoji||r.name.charAt(0)) : (r.emoji||'？')}</div>
-    <div class="rank-info"><div class="rank-name">${r.me?r.name+' (あなた)':'参加者'+(i+1)}</div><div class="rank-lv">Lv.${r.lv}</div></div>
+    <div class="rank-av">${isAdmin ? r.name.charAt(0) : (r.me ? (r.emoji||r.name.charAt(0)) : (r.emoji||'？'))}</div>
+    <div class="rank-info"><div class="rank-name">${isAdmin ? r.name : (r.me ? r.name+' (あなた)' : (r.emoji||'？'))}</div><div class="rank-lv">Lv.${r.lv}</div></div>
     <div class="rank-xp">${r.xp} XP</div>
   </div>`).join('');
 }
@@ -1742,6 +1742,7 @@ async function completeMission(id){
   if((m.submitType==='doc'||m.submitType==='image')&&!m._pendingFile) return;
   m.done=true;
   m.submittedFile=m._pendingFile||null;
+  m._completedDate=new Date().toDateString();
   xp+=m.xp;
   if(loggedInCandidate){
     if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
@@ -1749,8 +1750,55 @@ async function completeMission(id){
     await dbUpsert('missions',{candidate_id:loggedInCandidate.id, mission_id:m.id, done:true, submitted_file:m.submittedFile||null, xp:m.xp});
   }
   closeMissionModal();
+  // バッジ判定
+  const newBadges = checkBadges();
   renderMissions();
   showToast(`🎉 提出完了！ +${m.xp} XP`);
+  // 新バッジがあれば少し遅らせて通知
+  if(newBadges.length > 0){
+    setTimeout(()=>{
+      newBadges.forEach((b,i)=>{
+        setTimeout(()=>showToast(`🏅 バッジ獲得：${b.emoji} ${b.name}！`), i*1500);
+      });
+    }, 800);
+  }
+}
+
+function checkBadges(){
+  const newlyEarned = [];
+  const doneMissions = missions.filter(m=>m.done);
+  const doneCount = doneMissions.length;
+  const cats = [...new Set(doneMissions.map(m=>m.cat))];
+
+  // ランキング順位を計算
+  const rankData = candidates.map(c=>{
+    const prog = missionProgress[c.id]||{};
+    return {id:c.id, xp:Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0)};
+  }).sort((a,b)=>b.xp-a.xp);
+  const myRank = rankData.findIndex(r=>loggedInCandidate&&r.id===loggedInCandidate.id)+1;
+
+  const rules = {
+    first:   ()=> doneCount >= 1,
+    typing:  ()=> doneMissions.some(m=>m.title&&m.title.includes('寿司打')),
+    reading: ()=> doneMissions.some(m=>m.title&&m.title.includes('課題図書')),
+    senior:  ()=> doneMissions.some(m=>m.title&&m.title.includes('座談会')),
+    perfect: ()=> doneCount >= missions.length && missions.length > 0,
+    legend:  ()=> myRank >= 1 && myRank <= 5,
+    all:     ()=> cats.length >= new Set(missions.map(m=>m.cat)).size && missions.length > 0,
+    sprint:  ()=> {
+      const today = new Date().toDateString();
+      const todayDone = doneMissions.filter(m=>m._completedDate===today);
+      return todayDone.length >= 3;
+    },
+  };
+
+  badges.forEach(b=>{
+    if(!b.earned && rules[b.id] && rules[b.id]()){
+      b.earned = true;
+      newlyEarned.push(b);
+    }
+  });
+  return newlyEarned;
 }
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
@@ -2505,9 +2553,11 @@ function loginSuccess(candidate){
     if(p && p.done){ m.done = true; m.submittedFile = p.submittedFile||null; xp += p.xp||m.xp; }
     else { m.done = false; m.submittedFile = null; }
   });
+  // 既存の進捗からバッジを復元（通知なし）
+  checkBadges();
   nav('missions', document.getElementById('nav-missions'));
-  // 絵文字未設定なら設定画面へ
-  if(!candidate.emoji) showEmojiSetup();
+  // 絵文字未設定なら設定画面へ（少し遅らせて画面が描画されてから表示）
+  if(!candidate.emoji) setTimeout(showEmojiSetup, 300);
 }
 
 // ═══════════ EMOJI SETUP ═══════════

@@ -2612,10 +2612,19 @@ async function saveEmoji(){
   loggedInCandidate.emoji = selectedEmoji;
   const c = candidates.find(x=>x.id===loggedInCandidate.id);
   if(c) c.emoji = selectedEmoji;
-  // localStorageにも保存（DBにカラムがない場合のフォールバック）
   localStorage.setItem('emoji_'+loggedInCandidate.id, selectedEmoji);
   document.getElementById('emoji-overlay').style.display = 'none';
-  await dbUpsert('candidates', {...loggedInCandidate});
+  // emojiカラムだけをPATCHで更新
+  await fetch(`${SUPABASE_URL}/rest/v1/candidates?id=eq.${loggedInCandidate.id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({emoji: selectedEmoji})
+  });
   showToast('🎉 絵文字を設定しました！');
 }
 

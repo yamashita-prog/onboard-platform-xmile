@@ -1617,7 +1617,9 @@ function renderMissions(){
     const totalXp = Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0);
     const lv = getLevel(totalXp);
     const isMe = loggedInCandidate && c.id===loggedInCandidate.id;
-    return {name:c.name, emoji:c.emoji||null, xp:totalXp, lv:lv.lv, me:isMe};
+    // DBにemojiカラムがない場合はlocalStorageから取得
+    const emoji = c.emoji || localStorage.getItem('emoji_'+c.id) || null;
+    return {name:c.name, emoji, xp:totalXp, lv:lv.lv, me:isMe};
   }).sort((a,b)=>b.xp-a.xp);
   document.getElementById('rank-list').innerHTML=rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
@@ -2556,7 +2558,9 @@ function loginSuccess(candidate){
   // 既存の進捗からバッジを復元（通知なし）
   checkBadges();
   nav('missions', document.getElementById('nav-missions'));
-  // 絵文字未設定なら設定画面へ（少し遅らせて画面が描画されてから表示）
+  // 絵文字未設定なら設定画面へ（localStorageも確認）
+  const cachedEmoji = localStorage.getItem('emoji_'+candidate.id);
+  if(cachedEmoji && !candidate.emoji) candidate.emoji = cachedEmoji;
   if(!candidate.emoji) setTimeout(showEmojiSetup, 300);
 }
 
@@ -2604,6 +2608,8 @@ async function saveEmoji(){
   loggedInCandidate.emoji = selectedEmoji;
   const c = candidates.find(x=>x.id===loggedInCandidate.id);
   if(c) c.emoji = selectedEmoji;
+  // localStorageにも保存（DBにカラムがない場合のフォールバック）
+  localStorage.setItem('emoji_'+loggedInCandidate.id, selectedEmoji);
   document.getElementById('emoji-overlay').style.display = 'none';
   await dbUpsert('candidates', {...loggedInCandidate});
   showToast('🎉 絵文字を設定しました！');

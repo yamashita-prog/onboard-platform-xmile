@@ -486,6 +486,16 @@ tbody tr:hover td{background:var(--s2)}
 .login-mode-switch a{color:var(--accent);cursor:pointer;font-weight:600;text-decoration:none}
 .login-new-pass{background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
 .login-new-pass.show{display:block}
+
+/* 絵文字グリッド */
+.emoji-btn{
+  font-size:22px;padding:8px;border-radius:10px;cursor:pointer;
+  border:2px solid transparent;background:var(--s2);
+  transition:all .15s;text-align:center;
+}
+.emoji-btn:hover:not(.used){border-color:var(--accent);background:var(--s3)}
+.emoji-btn.selected{border-color:var(--accent);background:rgba(26,127,191,.1)}
+.emoji-btn.used{opacity:.25;cursor:not-allowed;filter:grayscale(1)}
 </style>
 </head>
 <body>
@@ -508,7 +518,18 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<!-- TOPBAR -->
+<!-- EMOJI SETUP OVERLAY -->
+<div class="login-overlay" id="emoji-overlay" style="display:none;z-index:490">
+  <div class="login-box">
+    <div class="login-logo">Onboard.</div>
+    <div class="login-sub" style="margin-bottom:8px">あなたのアバター絵文字を選んでください🎉</div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:20px">ランキングでこの絵文字で表示されます</div>
+    <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px"></div>
+    <div id="emoji-selected-preview" style="text-align:center;font-size:36px;margin-bottom:12px;min-height:44px"></div>
+    <div id="emoji-err" style="font-size:12px;color:var(--red);text-align:center;margin-bottom:8px;display:none"></div>
+    <button class="login-btn" id="emoji-save-btn" onclick="saveEmoji()" disabled style="opacity:.4">この絵文字で決定する</button>
+  </div>
+</div>
 <div class="topbar">
   <div class="logo">Onboard.</div>
   <div class="mode-pill">
@@ -539,7 +560,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
     <div class="nav-item" onclick="nav('timeline',this)"><span class="nav-icon">🗓</span><span class="nav-label">入社スケジュール</span></div>
   </div>
-  <div class="sidebar-footer">
+  <div class="sidebar-footer" style="display:none">
     <div class="sidebar-footer-user">
       <div class="sf-avatar" id="sf-av">田</div>
       <div><div class="sf-name" id="sf-name">田村 さくら</div><div class="sf-role" id="sf-role">採用担当</div></div>
@@ -1412,8 +1433,6 @@ function renderNewsCard(a){
         <div class="nc-action ${isLiked?'liked':''}" onclick="event.stopPropagation();quickLike(${a.id},this)">
           ${isLiked?'❤️':'🤍'} ${likes>0?likes:''}
         </div>
-        <div class="nc-action">💬 コメント</div>
-        <div class="nc-action">↗ シェア</div>
         ${isAdmin?`<div class="nc-action" onclick="event.stopPropagation();openEditNews(${a.id})" style="margin-left:auto">✏️</div>
         <div class="nc-action" onclick="event.stopPropagation();deleteNews(${a.id})" style="color:var(--red)">🗑</div>`:''}
       </div>
@@ -1598,12 +1617,12 @@ function renderMissions(){
     const totalXp = Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0);
     const lv = getLevel(totalXp);
     const isMe = loggedInCandidate && c.id===loggedInCandidate.id;
-    return {name:c.name, xp:totalXp, lv:lv.lv, me:isMe};
+    return {name:c.name, emoji:c.emoji||null, xp:totalXp, lv:lv.lv, me:isMe};
   }).sort((a,b)=>b.xp-a.xp);
   document.getElementById('rank-list').innerHTML=rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
-    <div class="rank-av">${r.name.charAt(0)}</div>
-    <div class="rank-info"><div class="rank-name">${r.me?r.name+' (あなた)':r.name}</div><div class="rank-lv">Lv.${r.lv}</div></div>
+    <div class="rank-av">${r.me ? (r.emoji||r.name.charAt(0)) : (r.emoji||'？')}</div>
+    <div class="rank-info"><div class="rank-name">${r.me?r.name+' (あなた)':'参加者'+(i+1)}</div><div class="rank-lv">Lv.${r.lv}</div></div>
     <div class="rank-xp">${r.xp} XP</div>
   </div>`).join('');
 }
@@ -2487,6 +2506,57 @@ function loginSuccess(candidate){
     else { m.done = false; m.submittedFile = null; }
   });
   nav('missions', document.getElementById('nav-missions'));
+  // 絵文字未設定なら設定画面へ
+  if(!candidate.emoji) showEmojiSetup();
+}
+
+// ═══════════ EMOJI SETUP ═══════════
+const EMOJI_CHOICES = ['🐶','🐱','🐭','🐹','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦋','🌸','🌟','⚡','🔥','🌈','🎯','🚀','💎','🎸','🍀','🌙','☀️','❄️','🎨','🎮','🏆','🦄','🍣','🍕','🎃','🌊','🦅','🐬','🌺','🎪'];
+let selectedEmoji = null;
+
+function showEmojiSetup(){
+  // 使用済み絵文字を取得
+  const usedEmojis = candidates.filter(c=>c.id!==loggedInCandidate.id).map(c=>c.emoji).filter(Boolean);
+  const grid = document.getElementById('emoji-grid');
+  grid.innerHTML = EMOJI_CHOICES.map(e => {
+    const isUsed = usedEmojis.includes(e);
+    return `<div class="emoji-btn ${isUsed?'used':''}" onclick="${isUsed?'':'selectEmoji(\''+e+'\')'}" title="${isUsed?'使用済み':''}">${e}</div>`;
+  }).join('');
+  selectedEmoji = null;
+  document.getElementById('emoji-selected-preview').textContent = '';
+  document.getElementById('emoji-err').style.display = 'none';
+  const saveBtn = document.getElementById('emoji-save-btn');
+  saveBtn.disabled = true; saveBtn.style.opacity = '.4';
+  document.getElementById('emoji-overlay').style.display = 'flex';
+}
+
+function selectEmoji(e){
+  selectedEmoji = e;
+  document.querySelectorAll('.emoji-btn').forEach(el=>{
+    el.classList.toggle('selected', el.textContent===e);
+  });
+  document.getElementById('emoji-selected-preview').textContent = e;
+  const saveBtn = document.getElementById('emoji-save-btn');
+  saveBtn.disabled = false; saveBtn.style.opacity = '1';
+  document.getElementById('emoji-err').style.display = 'none';
+}
+
+async function saveEmoji(){
+  if(!selectedEmoji) return;
+  // 重複チェック（念のため再確認）
+  const usedEmojis = candidates.filter(c=>c.id!==loggedInCandidate.id).map(c=>c.emoji).filter(Boolean);
+  if(usedEmojis.includes(selectedEmoji)){
+    const err = document.getElementById('emoji-err');
+    err.textContent = 'この絵文字はすでに使われています。別の絵文字を選んでください。';
+    err.style.display = 'block';
+    return;
+  }
+  loggedInCandidate.emoji = selectedEmoji;
+  const c = candidates.find(x=>x.id===loggedInCandidate.id);
+  if(c) c.emoji = selectedEmoji;
+  document.getElementById('emoji-overlay').style.display = 'none';
+  await dbUpsert('candidates', {...loggedInCandidate});
+  showToast('🎉 絵文字を設定しました！');
 }
 
 function doLogout(){

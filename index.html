@@ -1617,11 +1617,15 @@ function renderMissions(){
     const totalXp = Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0);
     const lv = getLevel(totalXp);
     const isMe = loggedInCandidate && c.id===loggedInCandidate.id;
-    // DBにemojiカラムがない場合はlocalStorageから取得
     const emoji = c.emoji || localStorage.getItem('emoji_'+c.id) || null;
     return {name:c.name, emoji, xp:totalXp, lv:lv.lv, me:isMe};
-  }).sort((a,b)=>b.xp-a.xp);
-  document.getElementById('rank-list').innerHTML=rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
+  }).sort((a,b)=>b.xp-a.xp)
+  // 内定者モードでは未ログイン(絵文字なし&XP=0)の人を非表示（自分は除く）
+  .filter(r => isAdmin || r.me || r.emoji || r.xp > 0);
+
+  document.getElementById('rank-list').innerHTML = rankData.length === 0
+    ? `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだ参加者がいません</div>`
+    : rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
     <div class="rank-av">${isAdmin ? r.name.charAt(0) : (r.me ? (r.emoji||r.name.charAt(0)) : (r.emoji||'？'))}</div>
     <div class="rank-info"><div class="rank-name">${isAdmin ? r.name : (r.me ? r.name+' (あなた)' : (r.emoji||'？'))}</div><div class="rank-lv">Lv.${r.lv}</div></div>

@@ -154,20 +154,181 @@ tbody tr:hover td{background:var(--s2)}
 .t-dead{background:rgba(245,158,11,.12);color:var(--amber)}
 .t-opt{background:rgba(32,212,154,.1);color:var(--green)}
 
-/* ── NEWS ── */
-.news-hero{padding:20px;border-bottom:1px solid var(--border)}
-.news-kicker{font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:8px;font-family:'Outfit',sans-serif}
-.news-headline{font-family:'Fraunces',serif;font-size:18px;font-weight:600;line-height:1.5;margin-bottom:8px}
-.news-body{font-size:13px;color:var(--text2);line-height:1.85}
-.news-byline{font-size:11px;color:var(--text3);margin-top:10px;display:flex;align-items:center;gap:6px}
-.news-list{padding:8px}
-.news-item{padding:12px;border-radius:8px;cursor:pointer;transition:background .15s;display:flex;gap:12px}
-.news-item:hover{background:var(--s2)}
-.ni-num{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--border2);min-width:20px;flex-shrink:0}
-.ni-cat{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;font-family:'Outfit',sans-serif}
-.ni-title{font-size:13px;font-weight:600;margin-bottom:2px}
-.ni-meta{font-size:11px;color:var(--text3)}
-.new-tag{background:var(--red);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;vertical-align:middle;margin-left:4px}
+/* ═══════════════════════════════════════
+   ── NEWS X-STYLE ──
+═══════════════════════════════════════ */
+
+/* フィードコンテナ */
+.news-feed{display:flex;flex-direction:column}
+
+/* 各記事カード */
+.news-card{
+  display:flex;gap:12px;
+  padding:16px 16px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background .15s;
+  position:relative;
+}
+.news-card:last-child{border-bottom:none}
+.news-card:hover{background:rgba(14,165,201,.04)}
+.news-card:hover .nc-title{color:var(--accent)}
+
+/* アバター列 */
+.nc-avatar{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#fff;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  font-family:'Outfit',sans-serif;
+}
+
+/* 本文列 */
+.nc-body{flex:1;min-width:0}
+.nc-header{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.nc-author{font-size:13px;font-weight:700;color:var(--text)}
+.nc-handle{font-size:12px;color:var(--text3)}
+.nc-dot{font-size:10px;color:var(--text3)}
+.nc-time{font-size:12px;color:var(--text3)}
+.nc-title{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:6px;color:var(--text);transition:color .15s}
+.nc-excerpt{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* 画像サムネイル（記事内） */
+.nc-image{
+  width:100%;
+  aspect-ratio:16/9;
+  border-radius:12px;
+  object-fit:cover;
+  margin-bottom:10px;
+  border:1px solid var(--border);
+  background:var(--s3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:40px;
+  overflow:hidden;
+}
+.nc-image img{width:100%;height:100%;object-fit:cover}
+.nc-image.has-emoji{font-size:52px}
+
+/* 複数画像グリッド */
+.nc-images-2{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:12px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border)}
+.nc-images-2 .nc-img-item{aspect-ratio:16/9;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden}
+.nc-images-2 .nc-img-item img{width:100%;height:100%;object-fit:cover}
+
+/* フッターアクション */
+.nc-footer{display:flex;align-items:center;gap:16px}
+.nc-action{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);padding:4px 8px;border-radius:99px;transition:all .15s;cursor:pointer}
+.nc-action:hover{background:rgba(26,127,191,.08);color:var(--accent)}
+.nc-action.liked{color:var(--red)}
+.nc-action.liked:hover{background:rgba(220,38,38,.08)}
+
+/* カテゴリバッジ */
+.nc-cat{
+  font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 8px;border-radius:99px;font-family:'Outfit',sans-serif;
+  margin-bottom:5px;display:inline-block;
+}
+
+/* NEW バッジ */
+.nc-new{
+  background:var(--red);color:#fff;
+  font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;
+  font-family:'Outfit',sans-serif;letter-spacing:.05em;
+  vertical-align:middle;
+}
+
+/* 緊急バナー */
+.nc-urgent{
+  background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.2);
+  border-radius:6px;padding:4px 10px;font-size:10px;font-weight:700;color:var(--red);
+  display:inline-flex;align-items:center;gap:4px;margin-bottom:6px;
+}
+
+/* ── 記事詳細モーダル（Xのスレッド風） ── */
+.article-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.6);
+  z-index:300;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s;
+}
+.article-modal-overlay.open{opacity:1;pointer-events:all}
+.article-modal{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:20px;
+  width:100%;max-width:600px;
+  max-height:88vh;
+  overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,80,140,.18);
+  animation:slideUp .3s cubic-bezier(.34,1.2,.64,1);
+}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.am-topbar{
+  position:sticky;top:0;
+  background:rgba(255,255,255,.9);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:12px 16px;
+  display:flex;align-items:center;gap:12px;
+  z-index:10;
+  border-radius:20px 20px 0 0;
+}
+.am-close{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--s2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:14px;color:var(--text2);flex-shrink:0;
+  transition:all .15s;
+}
+.am-close:hover{background:var(--s3);color:var(--text)}
+.am-header-title{font-size:16px;font-weight:700;font-family:'Fraunces',serif}
+.am-body{padding:20px 20px 28px}
+.am-author-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.am-avatar{
+  width:48px;height:48px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:#fff;font-family:'Outfit',sans-serif;
+}
+.am-author-info .am-name{font-size:15px;font-weight:700}
+.am-author-info .am-meta{font-size:12px;color:var(--text3);margin-top:2px}
+.am-title{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1.4;margin-bottom:12px}
+.am-image{
+  width:100%;aspect-ratio:16/9;
+  border-radius:14px;object-fit:cover;
+  margin-bottom:18px;border:1px solid var(--border);
+  background:var(--s3);display:flex;align-items:center;justify-content:center;
+  font-size:64px;overflow:hidden;
+}
+.am-image img{width:100%;height:100%;object-fit:cover}
+.am-text{font-size:14px;line-height:1.9;color:var(--text2);white-space:pre-wrap;margin-bottom:20px}
+.am-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+.am-stats{display:flex;gap:16px;font-size:13px;color:var(--text3);padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.am-stats span strong{color:var(--text);font-weight:700;margin-right:3px}
+.am-actions{display:flex;gap:4px}
+.am-act{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text3);padding:8px 14px;border-radius:99px;cursor:pointer;transition:all .15s;border:1px solid transparent}
+.am-act:hover{background:var(--s2);color:var(--accent);border-color:var(--border)}
+
+/* ── NEWS PAGE ── */
+.news-page-layout{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+.news-main-col{min-width:0}
+
+/* フィードヘッダー */
+.feed-header{
+  padding:16px 16px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.feed-header h2{font-size:15px;font-weight:700;font-family:'Fraunces',serif}
+.feed-tabs{display:flex;gap:0}
+.feed-tab{
+  padding:8px 18px;font-size:13px;font-weight:600;
+  cursor:pointer;color:var(--text2);
+  border-bottom:2px solid transparent;transition:all .15s;
+}
+.feed-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
 /* ── SCHEDULE FORM (日程調整) ── */
 .step-header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
@@ -227,7 +388,7 @@ tbody tr:hover td{background:var(--s2)}
 .nav-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 
 /* ── TOAST ── */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#fff;border:1px solid var(--green);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--green);z-index:999;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;display:flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,80,140,.12)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#fff;border:1px solid var(--green);border-radius:10px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--green);z-index:9999;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;display:flex;align-items:center;gap:8px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,80,140,.12)}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
 /* ── MODAL ── */
@@ -264,6 +425,22 @@ tbody tr:hover td{background:var(--s2)}
 .field input,.field select,.field textarea{font-family:'Noto Sans JP',sans-serif;font-size:13px;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;outline:none;transition:border-color .2s;resize:none}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
 .field select option{background:var(--s2)}
+
+/* 画像アップロードエリア */
+.img-upload-zone{
+  border:2px dashed var(--border2);border-radius:10px;
+  padding:20px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--s2);
+  position:relative;
+}
+.img-upload-zone:hover,.img-upload-zone.drag{border-color:var(--accent);background:rgba(26,127,191,.05)}
+.img-upload-zone input[type=file]{display:none}
+.img-upload-preview{
+  width:100%;aspect-ratio:16/9;border-radius:8px;
+  border:1px solid var(--border);background:var(--s2);
+  object-fit:cover;margin-top:8px;display:none;
+}
+.img-upload-filename{font-size:11px;color:var(--text3);margin-top:4px;display:none}
 
 /* ── RANKING ── */
 .rank-list{display:flex;flex-direction:column;gap:8px}
@@ -349,9 +526,7 @@ tbody tr:hover td{background:var(--s2)}
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-section">
-    <!-- ★ id="lbl-main" を追加 -->
     <div class="sidebar-label" id="lbl-main">メイン</div>
-    <!-- ★ id="nav-dashboard" を追加 -->
     <div class="nav-item active" id="nav-dashboard" onclick="nav('dashboard',this)"><span class="nav-icon">🏠</span><span class="nav-label">ダッシュボード</span></div>
     <div class="nav-item" onclick="nav('candidates',this)" id="nav-candidates"><span class="nav-icon">👥</span><span class="nav-label">内定者管理</span><span class="nav-badge">4</span></div>
     <div class="nav-item" onclick="nav('team',this)" id="nav-team"><span class="nav-icon">🧑‍💼</span><span class="nav-label">担当者管理</span></div>
@@ -360,7 +535,6 @@ tbody tr:hover td{background:var(--s2)}
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">内定者向け</div>
-    <!-- ★ id="nav-missions" を追加 -->
     <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
     <div class="nav-item" onclick="nav('timeline',this)"><span class="nav-icon">🗓</span><span class="nav-label">入社スケジュール</span></div>
@@ -432,11 +606,18 @@ tbody tr:hover td{background:var(--s2)}
     <div><div class="page-eyebrow">Weekly News</div><div class="page-title">週報・お知らせ</div><div class="page-sub">内定者への最新情報を発信</div></div>
     <button class="btn btn-primary" id="add-news-btn" onclick="openAddNews()">+ 記事を追加</button>
   </div>
-  <div class="two-col" style="align-items:start">
-    <div class="card">
-      <div class="news-hero" id="news-hero"></div>
-      <div class="news-list" id="news-list"></div>
+  <div class="news-page-layout">
+    <!-- メインフィード -->
+    <div class="news-main-col">
+      <div class="card" style="overflow:visible">
+        <div class="feed-header">
+          <h2>📰 フィード</h2>
+          <div style="font-size:11px;color:var(--text3)" id="news-count-label"></div>
+        </div>
+        <div class="news-feed" id="news-feed"></div>
+      </div>
     </div>
+    <!-- サイドバー -->
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="card">
         <div class="card-head"><h2>📅 スケジュール</h2></div>
@@ -546,61 +727,24 @@ tbody tr:hover td{background:var(--s2)}
     <div class="page-title">設定</div>
     <div class="page-sub">ミッション・面談種類・スケジュールの管理</div>
   </div>
-
-  <!-- ミッション設定 -->
   <div class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      <h2>🎯 入社前ミッション</h2>
-      <button class="btn btn-primary btn-sm" onclick="openSettingModal('mission')">+ 追加</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>アイコン</th><th>タイトル</th><th>カテゴリ</th><th>XP</th><th>提出方法</th><th>操作</th></tr></thead>
-        <tbody id="settings-mission-table"></tbody>
-      </table>
-    </div>
+    <div class="card-head"><h2>🎯 入社前ミッション</h2><button class="btn btn-primary btn-sm" onclick="openSettingModal('mission')">+ 追加</button></div>
+    <div class="table-wrap"><table><thead><tr><th>アイコン</th><th>タイトル</th><th>カテゴリ</th><th>XP</th><th>提出方法</th><th>操作</th></tr></thead><tbody id="settings-mission-table"></tbody></table></div>
   </div>
-
-  <!-- 面談種類設定 -->
   <div class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      <h2>📅 面談種類</h2>
-      <button class="btn btn-primary btn-sm" onclick="openSettingModal('schedtype')">+ 追加</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>アイコン</th><th>名前</th><th>説明</th><th>時間</th><th>操作</th></tr></thead>
-        <tbody id="settings-schedtype-table"></tbody>
-      </table>
-    </div>
+    <div class="card-head"><h2>📅 面談種類</h2><button class="btn btn-primary btn-sm" onclick="openSettingModal('schedtype')">+ 追加</button></div>
+    <div class="table-wrap"><table><thead><tr><th>アイコン</th><th>名前</th><th>説明</th><th>時間</th><th>操作</th></tr></thead><tbody id="settings-schedtype-table"></tbody></table></div>
   </div>
-
-  <!-- スケジュール設定 -->
   <div class="card" style="margin-bottom:16px">
-    <div class="card-head">
-      <h2>🗓 入社スケジュール</h2>
-      <button class="btn btn-primary btn-sm" onclick="openSettingModal('schedule')">+ 追加</button>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>月</th><th>日</th><th>タイトル</th><th>詳細</th><th>種別</th><th>操作</th></tr></thead>
-        <tbody id="settings-schedule-table"></tbody>
-      </table>
-    </div>
+    <div class="card-head"><h2>🗓 入社スケジュール</h2><button class="btn btn-primary btn-sm" onclick="openSettingModal('schedule')">+ 追加</button></div>
+    <div class="table-wrap"><table><thead><tr><th>月</th><th>日</th><th>タイトル</th><th>詳細</th><th>種別</th><th>操作</th></tr></thead><tbody id="settings-schedule-table"></tbody></table></div>
   </div>
-
-  <!-- 週報・お知らせ設定 -->
   <div class="card">
     <div class="card-head">
       <h2>📰 週報・お知らせ</h2>
-      <button class="btn btn-primary btn-sm" onclick="openSettingModal('news')">+ 追加</button>
+      <button class="btn btn-primary btn-sm" onclick="openSettingsAddNews()">+ 記事を追加</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>カテゴリ</th><th>タイトル</th><th>担当者</th><th>日付</th><th>操作</th></tr></thead>
-        <tbody id="settings-news-table"></tbody>
-      </table>
-    </div>
+    <div class="news-feed" id="settings-news-feed"></div>
   </div>
 </div>
 
@@ -628,21 +772,45 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<!-- MODAL: 記事追加 -->
+<!-- MODAL: 記事追加（画像URL対応） -->
 <div class="modal-overlay" id="add-news-modal" onclick="closeAddNewsModal(event)">
   <div class="modal">
-    <div class="modal-head"><div class="modal-title">記事・お知らせを追加</div><button class="modal-close" onclick="closeAddNewsModal()">✕</button></div>
+    <div class="modal-head"><div class="modal-title" id="add-news-modal-title">記事・お知らせを追加</div><button class="modal-close" onclick="closeAddNewsModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="field"><label>カテゴリ</label><select id="an-cat"><option>お知らせ</option><option>社長メッセージ</option><option>イベント</option><option>制度・福利厚生</option><option>文化</option></select></div>
         <div class="field"><label>重要度</label><select id="an-imp"><option value="normal">通常</option><option value="important">重要</option><option value="urgent">至急</option></select></div>
         <div class="field form-full"><label>タイトル</label><input id="an-title" placeholder="例：内定式の詳細が決まりました"></div>
-        <div class="field form-full"><label>本文</label><textarea id="an-body" rows="3" placeholder="内容を入力..."></textarea></div>
+        <div class="field form-full"><label>本文</label><textarea id="an-body" rows="4" placeholder="内容を入力..."></textarea></div>
+        <div class="field form-full">
+          <label>画像（省略可）</label>
+          <div class="img-upload-zone" id="an-img-zone"
+            onclick="document.getElementById('an-img-file').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="handleNewsImgDrop(event)">
+            <input type="file" id="an-img-file" accept="image/*" onchange="handleNewsImgSelect(event)">
+            <div id="an-img-placeholder">
+              <div style="font-size:24px;margin-bottom:6px">🖼️</div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">画像をアップロード</div>
+              <div style="font-size:11px;color:var(--text3)">クリックまたはドラッグ＆ドロップ · PNG / JPG / GIF</div>
+            </div>
+          </div>
+          <img id="an-img-preview" class="img-upload-preview" alt="プレビュー">
+          <div id="an-img-filename" class="img-upload-filename"></div>
+          <button type="button" id="an-img-clear" class="btn btn-ghost btn-sm" style="display:none;margin-top:6px" onclick="clearNewsImg()">✕ 画像を削除</button>
+        </div>
+        <div class="field"><label>絵文字アイコン（画像なし時）</label><input id="an-emoji" placeholder="🎉" maxlength="2"></div>
         <div class="field"><label>担当者名</label><input id="an-author" placeholder="採用担当 田村 さくら"></div>
       </div>
-      <button class="btn btn-primary" style="width:100%" onclick="addNews()">追加する</button>
+      <button class="btn btn-primary" style="width:100%" id="add-news-submit-btn" onclick="addNews()">追加する</button>
     </div>
   </div>
+</div>
+
+<!-- 記事詳細モーダル -->
+<div class="article-modal-overlay" id="article-modal" onclick="closeArticleModal(event)">
+  <div class="article-modal" id="article-modal-body"></div>
 </div>
 
 <!-- MISSION MODAL -->
@@ -669,10 +837,7 @@ tbody tr:hover td{background:var(--s2)}
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="setting-modal" onclick="closeSettingModal(event)">
   <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title" id="setting-modal-title">追加</div>
-      <button class="modal-close" onclick="closeSettingModal()">✕</button>
-    </div>
+    <div class="modal-head"><div class="modal-title" id="setting-modal-title">追加</div><button class="modal-close" onclick="closeSettingModal()">✕</button></div>
     <div class="modal-body" id="setting-modal-body"></div>
   </div>
 </div>
@@ -688,6 +853,7 @@ const LEVELS=[
   {lv:5,name:'エース',max:1200},{lv:6,name:'レジェンド',max:99999}
 ];
 const catColors={'お知らせ':'#f87171','社長メッセージ':'#5b8aff','イベント':'#20d49a','制度・福利厚生':'#a855f7','文化':'#f59e0b'};
+const catBg={'お知らせ':'rgba(248,113,113,.12)','社長メッセージ':'rgba(91,138,255,.12)','イベント':'rgba(32,212,154,.12)','制度・福利厚生':'rgba(168,85,247,.12)','文化':'rgba(245,158,11,.12)'};
 
 let candidates=[];
 let articles=[];
@@ -706,6 +872,9 @@ const faqs=[
   {q:'入社前ミッションは必ず全部完了しなければなりませんか？',a:'全完了が望ましいですが、入社後でも継続できるものもあります。書類系ミッションは入社日までに必ず完了してください。'},
   {q:'配属先はいつ頃確定しますか？',a:'入社月（7月）上旬に最終確定の予定です。オリエンテーション時に希望調査を行います。'},
 ];
+
+// 記事のいいね数
+let articleLikes={};
 
 let xp=0;
 let missions=[
@@ -759,29 +928,18 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 async function dbFetch(table){
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json'
-    }
+    headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json'}
   });
   if(!res.ok){ console.error('dbFetch error', table, res.status, await res.text()); return []; }
   return res.json();
 }
-
 async function dbUpsert(table, data){
   return fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST',
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'resolution=merge-duplicates'
-    },
+    headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'resolution=merge-duplicates'},
     body: JSON.stringify(Array.isArray(data) ? data : [data])
   });
 }
-
 async function dbDelete(table, id){
   return fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -789,7 +947,6 @@ async function dbDelete(table, id){
   });
 }
 
-// ミッション進捗データ
 let missionProgress = {};
 
 async function loadAll(){
@@ -805,7 +962,16 @@ async function loadAll(){
     ]);
     if(r && r.length > 0) recruiters = r;
     if(c && c.length > 0) candidates = c;
-    if(a && a.length > 0) articles = a.map(x=>({...x, isNew: x.is_new}));
+    if(a && a.length > 0) {
+      articles = a.map(x=>({...x, isNew: x.is_new}));
+      // DBにimageカラムがない場合のフォールバック: localStorageから画像を復元
+      articles.forEach(art => {
+        if(!art.image){
+          const cached = localStorage.getItem('article_img_'+art.id);
+          if(cached) art.image = cached;
+        }
+      });
+    }
     if(mp && mp.length > 0){
       missionProgress = {};
       mp.forEach(row => {
@@ -813,20 +979,13 @@ async function loadAll(){
         missionProgress[row.candidate_id][row.mission_id] = {done: row.done, submittedFile: row.submitted_file, xp: row.xp};
       });
     }
-    // Supabaseからミッション定義を上書き
     if(mt && mt.length > 0){
-      missions = mt.map(m=>({
-        id: m.id, icon: m.icon||'📋', title: m.title, desc: m.description||'',
-        cat: m.cat||'', xp: m.xp||0, done: false, stamp: '✅',
-        locked: false, submitType: m.submit_type||'check', submittedFile: null
-      }));
+      missions = mt.map(m=>({id: m.id, icon: m.icon||'📋', title: m.title, desc: m.description||'', cat: m.cat||'', xp: m.xp||0, done: false, stamp: '✅', locked: false, submitType: m.submit_type||'check', submittedFile: null}));
     }
-    // 面談種類を上書き
     if(st && st.length > 0){
       schedTypes.length = 0;
       st.forEach(s => schedTypes.push({id: String(s.id), icon: s.icon||'📅', name: s.name, desc: s.description||'', dur: s.duration||'30分'}));
     }
-    // スケジュールを上書き
     if(sc && sc.length > 0){
       schedules.length = 0;
       sc.forEach(s => schedules.push({id: s.id, month: s.month, day: s.day, title: s.title, detail: s.detail||'', tag: s.tag||'req', tagLabel: s.tag_label||''}));
@@ -835,7 +994,6 @@ async function loadAll(){
 }
 
 // ═══════════ MODE ═══════════
-// ★★★ ここが今回の変更箇所 ★★★
 let isAdmin=true;
 function setMode(m){
   isAdmin=(m==='admin');
@@ -843,13 +1001,11 @@ function setMode(m){
   document.getElementById('mode-user').classList.toggle('active',!isAdmin);
   const navCands=document.getElementById('nav-candidates');
   if(isAdmin){
-    // 管理者モード：全メニューを再表示してダッシュボードへ
     navCands.style.display='flex';
     document.getElementById('nav-dashboard').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('nav-settings').style.display='flex';
     document.getElementById('lbl-main').style.display='block';
-    
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
     document.getElementById('sf-av').textContent='田';
@@ -857,13 +1013,11 @@ function setMode(m){
     document.getElementById('add-news-btn').style.display='inline-flex';
     nav('dashboard', document.getElementById('nav-dashboard'));
   } else {
-    // 内定者モード：管理者メニューを非表示にしてミッション画面へ直接遷移
     navCands.style.display='none';
     document.getElementById('nav-dashboard').style.display='none';
     document.getElementById('nav-team').style.display='none';
     document.getElementById('nav-settings').style.display='none';
     document.getElementById('lbl-main').style.display='none';
-    
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
     document.getElementById('sf-av').textContent='花';
@@ -891,7 +1045,6 @@ function nav(page,el){
 
 // ═══════════ DASHBOARD ═══════════
 function renderDashboard(){
-  // ── stat cards ──
   const total = candidates.length;
   const totalDocs = candidates.reduce((s,c)=>s+(c.docs?c.docs.length:0), 0);
   const doneDocs = candidates.reduce((s,c)=>s+(c.docs?c.docs.filter(d=>d.done).length:0), 0);
@@ -909,10 +1062,14 @@ function renderDashboard(){
     <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
   </tr>`).join('');
   const news=document.getElementById('dash-news');
-  news.innerHTML=articles.slice(0,3).map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="nav('news',document.querySelector('[onclick*=news]'))">
-    <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${catColors[a.cat]||'#888'};margin-bottom:3px">${a.cat}${a.isNew?' <span style="background:var(--red);color:#fff;font-size:8px;padding:1px 4px;border-radius:2px">NEW</span>':''}</div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:2px">${a.title}</div>
-    <div style="font-size:11px;color:var(--text3)">${a.date}</div>
+  news.innerHTML=articles.slice(0,3).map(a=>`<div style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;display:flex;gap:10px;align-items:center" onclick="nav('news',document.querySelector('[onclick*=news]'))">
+    ${a.image?`<img src="${a.image}" style="width:48px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)">`:
+    `<div style="width:48px;height:36px;background:var(--s3);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">${a.emoji||'📰'}</div>`}
+    <div style="min-width:0">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${catColors[a.cat]||'#888'};margin-bottom:2px">${a.cat}</div>
+      <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.title}</div>
+      <div style="font-size:10px;color:var(--text3)">${a.date}</div>
+    </div>
   </div>`).join('');
   const ds=document.getElementById('dash-sched');
   ds.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
@@ -993,8 +1150,147 @@ async function addCandidate(){
   showToast('✅ 内定者を追加しました');
 }
 
-// ═══════════ NEWS ═══════════
+// ═══════════ NEWS (X-STYLE) ═══════════
 let pressReleases = [];
+
+// ── 記事画像アップロード ──
+let newsImgFile = null; // 選択中のFileオブジェクト
+let newsImgDataUrl = null; // base64プレビュー用
+
+function handleNewsImgSelect(event){
+  const file = event.target.files[0];
+  if(file) setNewsImg(file);
+}
+function handleNewsImgDrop(event){
+  event.preventDefault();
+  document.getElementById('an-img-zone').classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) setNewsImg(file);
+}
+function setNewsImg(file){
+  newsImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    newsImgDataUrl = e.target.result;
+    const preview = document.getElementById('an-img-preview');
+    preview.src = newsImgDataUrl;
+    preview.style.display = 'block';
+    document.getElementById('an-img-placeholder').style.display = 'none';
+    document.getElementById('an-img-filename').textContent = file.name;
+    document.getElementById('an-img-filename').style.display = 'block';
+    document.getElementById('an-img-clear').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+function clearNewsImg(){
+  newsImgFile = null;
+  newsImgDataUrl = null;
+  document.getElementById('an-img-file').value = '';
+  document.getElementById('an-img-preview').style.display = 'none';
+  document.getElementById('an-img-preview').src = '';
+  document.getElementById('an-img-placeholder').style.display = 'block';
+  document.getElementById('an-img-filename').style.display = 'none';
+  document.getElementById('an-img-clear').style.display = 'none';
+}
+function resetNewsImgField(){
+  clearNewsImg();
+}
+
+// 画像をbase64に変換（Canvas不使用・シンプル）
+async function uploadNewsImage(file){
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+// 記事詳細を開く
+function openArticle(id){
+  const a = articles.find(x=>x.id===id);
+  if(!a) return;
+  const likes = articleLikes[id]||0;
+  const views = a.views || Math.floor(Math.random()*400+50);
+  a.views = views;
+
+  const imageHtml = a.image
+    ? `<div class="am-image"><img data-modal-img="${id}" alt="${a.title}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.background='var(--s3)'"></div>`
+    : a.emoji
+    ? `<div class="am-image" style="font-size:64px">${a.emoji}</div>`
+    : '';
+
+  const modalEl = document.getElementById('article-modal-body');
+  modalEl.innerHTML=`
+    <div class="am-topbar">
+      <div class="am-close" onclick="closeArticleModal()">✕</div>
+      <div class="am-header-title">投稿</div>
+    </div>
+    <div class="am-body">
+      <div class="am-author-row">
+        <div class="am-avatar">${(a.author||'採').charAt(0)}</div>
+        <div class="am-author-info">
+          <div class="am-name">${a.author||'採用担当'}</div>
+          <div class="am-meta">${a.date} · ${a.cat}${a.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">⚡ 至急</span>':''}</div>
+        </div>
+      </div>
+      ${a.imp==='urgent'?`<div class="nc-urgent">⚡ 至急のお知らせ</div>`:''}
+      <div class="am-title">${a.title}</div>
+      ${imageHtml}
+      <div class="am-text">${(a.body||'').replace(/\n/g,'<br>')}</div>
+      <hr class="am-divider">
+      <div class="am-stats">
+        <span><strong>${views}</strong>件の閲覧</span>
+        <span><strong>${likes}</strong>件のいいね</span>
+      </div>
+      <div class="am-actions">
+        <div class="am-act" onclick="toggleLike(${id},this)">
+          ${articleLikes[id]?'❤️':'🤍'} いいね${likes>0?' '+likes:''}
+        </div>
+        <div class="am-act" onclick="closeArticleModal()">← 閉じる</div>
+        ${isAdmin?`<div class="am-act" onclick="closeArticleModal();openEditNews(${id})" style="margin-left:auto">✏️ 編集</div>
+        <div class="am-act" onclick="closeArticleModal();deleteNews(${id})" style="color:var(--red)">🗑 削除</div>`:''}
+      </div>
+    </div>`;
+  // base64画像をdata属性経由でセット
+  if(a.image){
+    const imgEl = modalEl.querySelector('img[data-modal-img]');
+    if(imgEl) imgEl.src = a.image;
+  }
+  document.getElementById('article-modal').classList.add('open');
+}
+
+function toggleLike(id, el){
+  if(articleLikes[id]){
+    delete articleLikes[id];
+  } else {
+    articleLikes[id] = 1;
+  }
+  openArticle(id); // 再描画
+}
+
+function closeArticleModal(e){
+  if(!e||e.target===document.getElementById('article-modal'))
+    document.getElementById('article-modal').classList.remove('open');
+}
+
+// 相対時間
+function relTime(dateStr){
+  if(!dateStr) return '';
+  try{
+    const d = new Date(dateStr.replace(/\//g,'-'));
+    if(isNaN(d)) return dateStr;
+    const diff = Date.now()-d.getTime();
+    const min = Math.floor(diff/60000);
+    if(min<1) return 'たった今';
+    if(min<60) return min+'分前';
+    const h = Math.floor(min/60);
+    if(h<24) return h+'時間前';
+    const day = Math.floor(h/24);
+    if(day<7) return day+'日前';
+    return `${d.getMonth()+1}月${d.getDate()}日`;
+  } catch(e){ return dateStr; }
+}
 
 async function fetchPressReleases(){
   try{
@@ -1008,12 +1304,8 @@ async function fetchPressReleases(){
       try{
         const res = await fetch(proxy);
         let text = '';
-        if(proxy.includes('allorigins')){
-          const data = await res.json();
-          text = data.contents;
-        } else {
-          text = await res.text();
-        }
+        if(proxy.includes('allorigins')){ const data = await res.json(); text = data.contents; }
+        else { text = await res.text(); }
         const parser = new DOMParser();
         xml = parser.parseFromString(text, 'text/xml');
         if(xml.querySelector('item')) break;
@@ -1033,10 +1325,7 @@ async function fetchPressReleases(){
 function renderPressReleases(){
   const el = document.getElementById('press-release-list');
   if(!el) return;
-  if(pressReleases.length === 0){
-    el.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text3)">プレスリリースを取得中...</div>';
-    return;
-  }
+  if(pressReleases.length === 0){ el.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--text3)">プレスリリースを取得中...</div>'; return; }
   el.innerHTML = pressReleases.map(p=>`
     <a href="${p.link}" target="_blank" style="display:block;padding:12px;border-radius:8px;text-decoration:none;color:inherit;transition:background .15s;margin-bottom:4px" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background='transparent'">
       <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">📢 プレスリリース</div>
@@ -1048,18 +1337,31 @@ function renderPressReleases(){
 
 async function renderNews(){
   const sorted=[...articles].sort((a,b)=>b.id-a.id);
-  if(sorted.length > 0){
-    const hero=sorted[0];
-    document.getElementById('news-hero').innerHTML=`
-      <div class="news-kicker" style="color:${catColors[hero.cat]||'#888'}">${hero.cat}${hero.isNew?' <span class="new-tag">NEW</span>':''}</div>
-      <div class="news-headline">${hero.title}</div>
-      <div class="news-body">${hero.body}</div>
-      <div class="news-byline">👤 ${hero.author} · ${hero.date}${hero.imp==='urgent'?' · <span style="color:var(--red);font-weight:700">至急</span>':''}</div>`;
-    document.getElementById('news-list').innerHTML=sorted.slice(1).map((a,i)=>`<div class="news-item">
-      <div class="ni-num">0${i+1}</div>
-      <div><div class="ni-cat" style="color:${catColors[a.cat]||'#888'}">${a.cat}${a.isNew?' ✦':''}</div><div class="ni-title">${a.title}</div><div class="ni-meta">${a.author} · ${a.date}</div></div>
-    </div>`).join('');
+
+  // カウントラベル
+  const countEl = document.getElementById('news-count-label');
+  if(countEl) countEl.textContent = sorted.length + '件';
+
+  // X風フィード
+  const feed = document.getElementById('news-feed');
+  if(feed){
+    if(sorted.length === 0){
+      feed.innerHTML = `<div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:8px">📭</div>
+        <div style="font-size:14px">まだ記事がありません</div>
+        ${isAdmin?'<div style="font-size:12px;margin-top:4px">「+ 記事を追加」から投稿しましょう</div>':''}
+      </div>`;
+    } else {
+      feed.innerHTML = sorted.map(a => renderNewsCard(a)).join('');
+      // base64画像をdata属性経由でセット（テンプレート文字列破損を回避）
+      feed.querySelectorAll('img[data-article-img]').forEach(img => {
+        const id = Number(img.getAttribute('data-article-img'));
+        const art = articles.find(x=>x.id===id);
+        if(art && art.image) img.src = art.image;
+      });
+    }
   }
+
   const ns=document.getElementById('news-sched');
   ns.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
   const fl=document.getElementById('faq-list');
@@ -1070,6 +1372,63 @@ async function renderNews(){
   renderPressReleases();
   await fetchPressReleases();
   renderPressReleases();
+}
+
+function renderNewsCard(a){
+  const color = catColors[a.cat]||'#888';
+  const bg = catBg[a.cat]||'rgba(136,136,136,.1)';
+  const initial = (a.author||'採').charAt(0);
+  const likes = articleLikes[a.id]||0;
+  const isLiked = !!articleLikes[a.id];
+
+  // 画像 or 絵文字アイコン（base64をテンプレートに直接埋めると壊れるのでdata属性経由）
+  let mediaHtml = '';
+  if(a.image){
+    mediaHtml = `<div class="nc-image" style="background:var(--s3)">
+      <img data-article-img="${a.id}" alt="${a.title}" onerror="this.parentElement.style.display='none'" style="width:100%;height:100%;object-fit:cover">
+    </div>`;
+  } else if(a.emoji){
+    mediaHtml = `<div class="nc-image has-emoji">${a.emoji}</div>`;
+  }
+
+  // 本文プレビュー（2行）
+  const bodyPreview = (a.body||'').replace(/<[^>]*>/g,'').slice(0,120);
+
+  return `<div class="news-card" onclick="openArticle(${a.id})">
+    <div class="nc-avatar" style="background:linear-gradient(135deg,${color},${color}aa)">${initial}</div>
+    <div class="nc-body">
+      <div class="nc-header">
+        <span class="nc-author">${a.author||'採用担当'}</span>
+        <span class="nc-dot">·</span>
+        <span class="nc-time">${relTime(a.date)}</span>
+        ${a.isNew?`<span class="nc-new">NEW</span>`:''}
+      </div>
+      <span class="nc-cat" style="color:${color};background:${bg}">${a.cat}</span>
+      ${a.imp==='urgent'?`<div class="nc-urgent">⚡ 至急</div>`:''}
+      <div class="nc-title">${a.title}</div>
+      ${bodyPreview?`<div class="nc-excerpt">${bodyPreview}</div>`:''}
+      ${mediaHtml}
+      <div class="nc-footer">
+        <div class="nc-action ${isLiked?'liked':''}" onclick="event.stopPropagation();quickLike(${a.id},this)">
+          ${isLiked?'❤️':'🤍'} ${likes>0?likes:''}
+        </div>
+        <div class="nc-action">💬 コメント</div>
+        <div class="nc-action">↗ シェア</div>
+        ${isAdmin?`<div class="nc-action" onclick="event.stopPropagation();openEditNews(${a.id})" style="margin-left:auto">✏️</div>
+        <div class="nc-action" onclick="event.stopPropagation();deleteNews(${a.id})" style="color:var(--red)">🗑</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function quickLike(id, el){
+  if(articleLikes[id]){ delete articleLikes[id]; }
+  else { articleLikes[id] = 1; }
+  // フィードを部分再描画
+  const a = articles.find(x=>x.id===id);
+  if(!a) return;
+  const card = el.closest('.news-card');
+  if(card){ card.outerHTML = renderNewsCard(a); }
 }
 
 async function deleteNews(id){
@@ -1088,12 +1447,24 @@ function openEditNews(id){
   document.getElementById('an-imp').value=a.imp||'normal';
   document.getElementById('an-title').value=a.title||'';
   document.getElementById('an-body').value=a.body||'';
+  document.getElementById('an-emoji').value=a.emoji||'';
   document.getElementById('an-author').value=a.author||'';
-  // 保存ボタンを「更新」モードに切り替え
-  const btn=document.querySelector('#add-news-modal .btn-primary');
+  // 既存画像のプレビューをセット
+  resetNewsImgField();
+  if(a.image){
+    const preview = document.getElementById('an-img-preview');
+    preview.src = a.image;
+    preview.style.display = 'block';
+    document.getElementById('an-img-placeholder').style.display = 'none';
+    document.getElementById('an-img-clear').style.display = 'inline-flex';
+    document.getElementById('an-img-filename').textContent = '（既存の画像）';
+    document.getElementById('an-img-filename').style.display = 'block';
+    newsImgDataUrl = a.image; // 既存URLを保持
+  }
+  const btn=document.getElementById('add-news-submit-btn');
   btn.textContent='更新する';
   btn.onclick=()=>updateNews(id);
-  document.querySelector('#add-news-modal .modal-title').textContent='記事を編集';
+  document.getElementById('add-news-modal-title').textContent='記事を編集';
   document.getElementById('add-news-modal').classList.add('open');
 }
 
@@ -1103,43 +1474,83 @@ async function updateNews(id){
   a.imp=document.getElementById('an-imp').value;
   a.title=document.getElementById('an-title').value.trim();
   a.body=document.getElementById('an-body').value.trim();
+  a.emoji=document.getElementById('an-emoji').value.trim()||null;
   a.author=document.getElementById('an-author').value||'採用担当';
   if(!a.title||!a.body) return;
+  // 新しいファイルが選択されていればアップロード
+  if(newsImgFile){
+    try{
+      a.image = await Promise.race([
+        uploadNewsImage(newsImgFile),
+        new Promise(r => setTimeout(()=>r(null), 3000))
+      ]);
+    } catch(e){ a.image = newsImgDataUrl; }
+  } else if(!newsImgDataUrl){
+    a.image = null;
+  }
+  // localStorageにも同期
+  if(a.image) localStorage.setItem('article_img_'+a.id, a.image);
+  else localStorage.removeItem('article_img_'+a.id);
   closeAddNewsModal();
-  await dbUpsert('articles', {id:a.id,cat:a.cat,title:a.title,body:a.body,author:a.author,date:a.date,is_new:a.isNew||false,imp:a.imp});
-  // ボタンを追加モードに戻す
-  const btn=document.querySelector('#add-news-modal .btn-primary');
+  await dbUpsert('articles', {id:a.id,cat:a.cat,title:a.title,body:a.body,image:a.image||null,emoji:a.emoji,author:a.author,date:a.date,is_new:a.isNew||false,imp:a.imp});
+  const btn=document.getElementById('add-news-submit-btn');
   btn.textContent='追加する';
   btn.onclick=addNews;
-  document.querySelector('#add-news-modal .modal-title').textContent='記事・お知らせを追加';
+  document.getElementById('add-news-modal-title').textContent='記事・お知らせを追加';
   renderNews();
   showToast('✅ 記事を更新しました');
 }
 
 function toggleFaq(i){document.getElementById('faq-'+i).classList.toggle('open')}
-function openAddNews(){document.getElementById('add-news-modal').classList.add('open')}
+function openAddNews(){
+  const btn=document.getElementById('add-news-submit-btn');
+  btn.textContent='追加する';
+  btn.onclick=addNews;
+  document.getElementById('add-news-modal-title').textContent='記事・お知らせを追加';
+  resetNewsImgField();
+  document.getElementById('add-news-modal').classList.add('open');
+}
 function closeAddNewsModal(e){if(!e||e.target===document.getElementById('add-news-modal'))document.getElementById('add-news-modal').classList.remove('open')}
 
 async function addNews(){
   const title=document.getElementById('an-title').value.trim();
   const body=document.getElementById('an-body').value.trim();
   if(!title||!body) return;
+  const btn=document.getElementById('add-news-submit-btn');
+  btn.disabled=true;
+  btn.textContent='処理中...';
+  let imageUrl = null;
+  if(newsImgFile){
+    try{
+      imageUrl = await Promise.race([
+        uploadNewsImage(newsImgFile),
+        new Promise(r => setTimeout(()=>r(null), 3000))
+      ]);
+    } catch(e){ imageUrl = null; }
+  }
   const today=new Date().toLocaleDateString('ja-JP');
   const record={
     id: Date.now(),
     cat: document.getElementById('an-cat').value,
     title, body,
+    image: imageUrl,
+    emoji: document.getElementById('an-emoji').value.trim()||null,
     author: document.getElementById('an-author').value||'採用担当',
     date: today,
     is_new: true,
     imp: document.getElementById('an-imp').value
   };
   articles.push({...record, isNew:true});
-  ['an-title','an-body','an-author'].forEach(id=>document.getElementById(id).value='');
+  // DBにimageカラムがない場合のフォールバック: localStorageにも保存
+  if(imageUrl) localStorage.setItem('article_img_'+record.id, imageUrl);
+  ['an-title','an-body','an-author','an-emoji'].forEach(id=>document.getElementById(id).value='');
+  resetNewsImgField();
+  btn.disabled=false;
+  btn.textContent='追加する';
   closeAddNewsModal();
   await dbUpsert('articles', record);
   renderNews();
-  showToast('記事を追加しました');
+  showToast('📰 記事を追加しました');
 }
 
 // ═══════════ MISSIONS ═══════════
@@ -1181,7 +1592,6 @@ function renderMissions(){
     <div class="badge-cond">${b.cond}</div>
   </div>`).join('');
 
-  // ランキングをcandidates+missionProgressから動的生成
   const rc=['g','s','b'];
   const rankData = candidates.map(c=>{
     const prog = missionProgress[c.id]||{};
@@ -1200,7 +1610,6 @@ function renderMissions(){
 
 function openMission(id){
   const m=missions.find(x=>x.id===id);
-
   let submitArea='';
   if(m.done){
     submitArea=`<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.25);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -1274,7 +1683,6 @@ function handleFileSelect(event,id){
   if(!file) return;
   showFilePreview(id,file);
 }
-
 function handleDrop(event,id){
   event.preventDefault();
   const file=event.dataTransfer.files[0];
@@ -1282,7 +1690,6 @@ function handleDrop(event,id){
   document.getElementById('drop-zone-'+id).style.borderColor='var(--border2)';
   showFilePreview(id,file);
 }
-
 function showFilePreview(id,file){
   const m=missions.find(x=>x.id===id);
   const preview=document.getElementById('file-preview-'+id);
@@ -1300,7 +1707,6 @@ function showFilePreview(id,file){
   if(btn){btn.disabled=false;btn.style.opacity='1';}
   m._pendingFile=file.name;
 }
-
 function clearFile(id){
   const m=missions.find(x=>x.id===id);
   const preview=document.getElementById('file-preview-'+id);
@@ -1311,7 +1717,6 @@ function clearFile(id){
   if(input) input.value='';
   m._pendingFile=null;
 }
-
 async function completeMission(id){
   const m=missions.find(x=>x.id===id);
   if(!m||m.done) return;
@@ -1319,7 +1724,6 @@ async function completeMission(id){
   m.done=true;
   m.submittedFile=m._pendingFile||null;
   xp+=m.xp;
-  // Supabaseに保存
   if(loggedInCandidate){
     if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
     missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:m.xp};
@@ -1329,10 +1733,9 @@ async function completeMission(id){
   renderMissions();
   showToast(`🎉 提出完了！ +${m.xp} XP`);
 }
-
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
-// ═══════════ SCHEDULE BOOKING (Google Calendar連携) ═══════════
+// ═══════════ SCHEDULE BOOKING ═══════════
 let gcalSlots = {};
 let loadingSlots = false;
 
@@ -1341,31 +1744,17 @@ async function fetchAvailability(recruiter, date) {
   if (gcalSlots[key] !== undefined) return;
   loadingSlots = true;
   renderSchedStep();
-
   try {
     const timeMin = new Date(date);
     timeMin.setHours(9, 0, 0, 0);
     const timeMax = new Date(date);
     timeMax.setHours(18, 0, 0, 0);
-
-    const prompt = `Google CalendarでユーザーのカレンダーIDはprimaryです。
-${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得してください。
-取得した予定をもとに、9:00〜17:00の間で30分刻みの時間枠のうち、予定が入っていない空き時間を特定してください。
-以下のJSON形式のみで返答してください（前置き・説明不要）:
-{"slots":[{"time":"09:00","available":true},{"time":"09:30","available":false},{"time":"10:00","available":true},...]}
-予定が取得できない場合は全スロットをavailable:trueとして返してください。`;
-
+    const prompt = `Google CalendarでユーザーのカレンダーIDはprimaryです。${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得してください。取得した予定をもとに、9:00〜17:00の間で30分刻みの時間枠のうち、予定が入っていない空き時間を特定してください。以下のJSON形式のみで返答してください（前置き・説明不要）:{"slots":[{"time":"09:00","available":true},...]}`;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({model: 'claude-sonnet-4-20250514',max_tokens: 1000,mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],messages: [{ role: 'user', content: prompt }]})
     });
-
     const data = await res.json();
     const textBlock = data.content?.find(b => b.type === 'text');
     const text = textBlock?.text || '';
@@ -1387,27 +1776,13 @@ async function submitToCalendar(recruiter, date, slot, type) {
     startDt.setHours(h, m, 0, 0);
     const endDt = new Date(startDt);
     endDt.setMinutes(endDt.getMinutes() + (type.dur === '60分' ? 60 : type.dur === '45分' ? 45 : 30));
-
-    const prompt = `Google Calendarのプライマリカレンダーに以下の予定を追加してください：
-タイトル：「${type.name} - ${recruiter.name}」
-開始：${startDt.toISOString()}
-終了：${endDt.toISOString()}
-説明：内定者との面談（${type.name}）
-予定を作成したら「作成完了」とだけ答えてください。`;
-
+    const prompt = `Google Calendarのプライマリカレンダーに以下の予定を追加してください：タイトル：「${type.name} - ${recruiter.name}」開始：${startDt.toISOString()}終了：${endDt.toISOString()}予定を作成したら「作成完了」とだけ答えてください。`;
     await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
-        mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({model: 'claude-sonnet-4-20250514',max_tokens: 200,mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],messages: [{ role: 'user', content: prompt }]})
     });
-  } catch(e) {
-    console.log('Calendar registration failed (non-critical):', e);
-  }
+  } catch(e) { console.log('Calendar registration failed:', e); }
 }
 
 function renderSchedStep(){
@@ -1451,17 +1826,13 @@ function renderSchedStep(){
       const hasS=clickable;
       days+=`<div class="cal-day ${isPast?'cal-past':''} ${isTod?'cal-today':''} ${isSel?'cal-sel':''} ${hasS?'cal-has':''}" onclick="${clickable?'sBookPickDate('+year+','+month+','+d+')':''}">${d}</div>`;
     }
-
     let slotsHtml='';
     if(sBook.date){
       const key=dk(sBook.date);
       const dow=dows[sBook.date.getDay()];
       const dateLabel=`${sBook.date.getMonth()+1}月${sBook.date.getDate()}日（${dow}）`;
       if(loadingSlots){
-        slotsHtml=`<div style="text-align:center;padding:24px;color:var(--text2)">
-          <div style="font-size:20px;margin-bottom:8px">🔄</div>
-          <div style="font-size:13px">${recruiters.find(r=>r.id===sBook.rec)?.name}のGoogleカレンダーを確認中...</div>
-        </div>`;
+        slotsHtml=`<div style="text-align:center;padding:24px;color:var(--text2)"><div style="font-size:20px;margin-bottom:8px">🔄</div><div style="font-size:13px">${recruiters.find(r=>r.id===sBook.rec)?.name}のGoogleカレンダーを確認中...</div></div>`;
       } else if(gcalSlots[key]){
         const slots=gcalSlots[key];
         const availCount=slots.filter(s=>s.available).length;
@@ -1476,7 +1847,6 @@ function renderSchedStep(){
         </div>`).join('')}</div>`;
       }
     }
-
     body.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <button class="btn btn-ghost btn-sm" onclick="changeCalMonth(-1)">‹</button>
@@ -1576,10 +1946,8 @@ function renderTimeline(){
 
 // ═══════════ SETTINGS ═══════════
 const submitTypeLabel={doc:'📄 ファイル提出',image:'📸 スクショ提出',check:'✋ 参加報告'};
-const tagOptions=[{v:'req',l:'必須参加'},{v:'dead',l:'締め切り'},{v:'opt',l:'任意参加'}];
 
 function renderSettings(){
-  // ミッション一覧
   document.getElementById('settings-mission-table').innerHTML=missions.map(m=>`<tr>
     <td>${m.icon}</td>
     <td><strong>${m.title}</strong></td>
@@ -1591,8 +1959,6 @@ function renderSettings(){
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('mission',${m.id})">🗑</button>
     </td>
   </tr>`).join('');
-
-  // 面談種類一覧
   document.getElementById('settings-schedtype-table').innerHTML=schedTypes.map(s=>`<tr>
     <td>${s.icon}</td>
     <td><strong>${s.name}</strong></td>
@@ -1603,8 +1969,6 @@ function renderSettings(){
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedtype','${s.id}')">🗑</button>
     </td>
   </tr>`).join('');
-
-  // スケジュール一覧
   document.getElementById('settings-schedule-table').innerHTML=schedules.map(s=>`<tr>
     <td style="font-weight:700;color:var(--text2)">${s.month}</td>
     <td style="font-family:'Outfit',sans-serif;font-weight:700">${s.day}</td>
@@ -1616,19 +1980,172 @@ function renderSettings(){
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedule',${s.id})">🗑</button>
     </td>
   </tr>`).join('');
-
-  // 週報一覧
   const sortedArticles=[...articles].sort((a,b)=>b.id-a.id);
-  document.getElementById('settings-news-table').innerHTML=sortedArticles.map(a=>`<tr>
-    <td><span style="font-size:10px;font-weight:700;color:${catColors[a.cat]||'#888'}">${a.cat}</span></td>
-    <td><strong>${a.title}</strong></td>
-    <td style="color:var(--text2);font-size:12px">${a.author}</td>
-    <td style="color:var(--text2);font-size:12px">${a.date}</td>
-    <td style="display:flex;gap:6px">
-      <button class="btn btn-ghost btn-sm" onclick="openSettingModal('news',${a.id})">✏️ 編集</button>
-      <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('news',${a.id})">🗑</button>
-    </td>
-  </tr>`).join('');
+  const settingsFeed = document.getElementById('settings-news-feed');
+  if(settingsFeed){
+    if(sortedArticles.length === 0){
+      settingsFeed.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">
+        <div style="font-size:28px;margin-bottom:8px">📭</div>
+        <div style="font-size:13px">まだ記事がありません</div>
+      </div>`;
+    } else {
+      settingsFeed.innerHTML = sortedArticles.map(a => renderSettingsNewsCard(a)).join('');
+      settingsFeed.querySelectorAll('img[data-settings-img]').forEach(img => {
+        const id = Number(img.getAttribute('data-settings-img'));
+        const art = articles.find(x=>x.id===id);
+        if(art && art.image) img.src = art.image;
+      });
+    }
+  }
+}
+
+// 設定ページ用ニュースカード（編集・削除ボタン常時表示）
+function renderSettingsNewsCard(a){
+  const color = catColors[a.cat]||'#888';
+  const bg = catBg[a.cat]||'rgba(136,136,136,.1)';
+  const initial = (a.author||'採').charAt(0);
+  const bodyPreview = (a.body||'').slice(0,100);
+  const mediaHtml = a.image
+    ? `<div class="nc-image" style="background:var(--s3)"><img data-settings-img="${a.id}" alt="${a.title}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'"></div>`
+    : a.emoji ? `<div class="nc-image has-emoji">${a.emoji}</div>` : '';
+  return `<div class="news-card">
+    <div class="nc-avatar" style="background:linear-gradient(135deg,${color},${color}aa)">${initial}</div>
+    <div class="nc-body">
+      <div class="nc-header">
+        <span class="nc-author">${a.author||'採用担当'}</span>
+        <span class="nc-dot">·</span>
+        <span class="nc-time">${relTime(a.date)}</span>
+        ${a.isNew?`<span class="nc-new">NEW</span>`:''}
+        ${a.imp==='urgent'?`<span style="color:var(--red);font-size:10px;font-weight:700">⚡ 至急</span>`:''}
+      </div>
+      <span class="nc-cat" style="color:${color};background:${bg}">${a.cat}</span>
+      <div class="nc-title">${a.title}</div>
+      ${bodyPreview?`<div class="nc-excerpt">${bodyPreview}</div>`:''}
+      ${mediaHtml}
+      <div class="nc-footer">
+        <div class="nc-action" onclick="openSettingsEditNews(${a.id})" style="color:var(--accent)">✏️ 編集</div>
+        <div class="nc-action" onclick="deleteSettingsNews(${a.id})" style="color:var(--red)">🗑 削除</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// 設定ページから週報追加
+function openSettingsAddNews(){
+  // 週報ページの追加モーダルを再利用
+  const btn = document.getElementById('add-news-submit-btn');
+  btn.textContent = '追加する';
+  btn.onclick = addSettingsNews;
+  document.getElementById('add-news-modal-title').textContent = '記事・お知らせを追加';
+  resetNewsImgField();
+  ['an-title','an-body','an-author','an-emoji'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('an-cat').value = 'お知らせ';
+  document.getElementById('an-imp').value = 'normal';
+  document.getElementById('add-news-modal').classList.add('open');
+}
+
+async function addSettingsNews(){
+  const title = document.getElementById('an-title').value.trim();
+  const body = document.getElementById('an-body').value.trim();
+  if(!title||!body) return;
+  const btn = document.getElementById('add-news-submit-btn');
+  btn.disabled = true; btn.textContent = '処理中...';
+  let imageUrl = null;
+  if(newsImgFile){
+    try{ imageUrl = await Promise.race([uploadNewsImage(newsImgFile), new Promise(r=>setTimeout(()=>r(null),3000))]); }
+    catch(e){ imageUrl = null; }
+  }
+  const today = new Date().toLocaleDateString('ja-JP');
+  const record = {
+    id: Date.now(),
+    cat: document.getElementById('an-cat').value,
+    title, body, image: imageUrl,
+    emoji: document.getElementById('an-emoji').value.trim()||null,
+    author: document.getElementById('an-author').value||'採用担当',
+    date: today, is_new: true,
+    imp: document.getElementById('an-imp').value
+  };
+  articles.push({...record, isNew:true});
+  if(imageUrl) localStorage.setItem('article_img_'+record.id, imageUrl);
+  resetNewsImgField();
+  ['an-title','an-body','an-author','an-emoji'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  // モーダルを確実に閉じてボタンをリセット
+  document.getElementById('add-news-modal').classList.remove('open');
+  btn.disabled = false; btn.textContent = '追加する'; btn.onclick = addNews;
+  document.getElementById('add-news-modal-title').textContent = '記事・お知らせを追加';
+  // 画面を更新してトースト
+  renderSettings();
+  renderNews().catch(()=>{});
+  await dbUpsert('articles', record);
+  showToast('📰 記事を追加しました');
+}
+
+// 設定ページから週報編集（追加モーダルを再利用）
+function openSettingsEditNews(id){
+  const a = articles.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('an-cat').value = a.cat||'お知らせ';
+  document.getElementById('an-imp').value = a.imp||'normal';
+  document.getElementById('an-title').value = a.title||'';
+  document.getElementById('an-body').value = a.body||'';
+  document.getElementById('an-emoji').value = a.emoji||'';
+  document.getElementById('an-author').value = a.author||'';
+  resetNewsImgField();
+  if(a.image){
+    const preview = document.getElementById('an-img-preview');
+    preview.src = a.image; preview.style.display = 'block';
+    document.getElementById('an-img-placeholder').style.display = 'none';
+    document.getElementById('an-img-clear').style.display = 'inline-flex';
+    document.getElementById('an-img-filename').textContent = '（既存の画像）';
+    document.getElementById('an-img-filename').style.display = 'block';
+    newsImgDataUrl = a.image;
+  }
+  const btn = document.getElementById('add-news-submit-btn');
+  btn.textContent = '更新する';
+  btn.onclick = () => updateSettingsNews(id);
+  document.getElementById('add-news-modal-title').textContent = '記事を編集';
+  document.getElementById('add-news-modal').classList.add('open');
+}
+
+async function updateSettingsNews(id){
+  const a = articles.find(x=>x.id===id);
+  if(!a) return;
+  a.cat = document.getElementById('an-cat').value;
+  a.imp = document.getElementById('an-imp').value;
+  a.title = document.getElementById('an-title').value.trim();
+  a.body = document.getElementById('an-body').value.trim();
+  a.emoji = document.getElementById('an-emoji').value.trim()||null;
+  a.author = document.getElementById('an-author').value||'採用担当';
+  if(!a.title||!a.body) return;
+  const btn = document.getElementById('add-news-submit-btn');
+  btn.disabled = true; btn.textContent = '処理中...';
+  if(newsImgFile){
+    try{ a.image = await Promise.race([uploadNewsImage(newsImgFile), new Promise(r=>setTimeout(()=>r(null),3000))]); }
+    catch(e){}
+  } else if(!newsImgDataUrl){ a.image = null; }
+  if(a.image) localStorage.setItem('article_img_'+a.id, a.image);
+  else localStorage.removeItem('article_img_'+a.id);
+  // モーダルを確実に閉じてボタンをリセット
+  document.getElementById('add-news-modal').classList.remove('open');
+  btn.disabled = false; btn.textContent = '追加する'; btn.onclick = addNews;
+  document.getElementById('add-news-modal-title').textContent = '記事・お知らせを追加';
+  // 画面を更新してトースト
+  renderSettings();
+  renderNews().catch(()=>{});
+  await dbUpsert('articles', {id:a.id,cat:a.cat,title:a.title,body:a.body,image:a.image||null,emoji:a.emoji,author:a.author,date:a.date,is_new:a.isNew||false,imp:a.imp});
+  showToast('✅ 記事を更新しました');
+}
+
+async function deleteSettingsNews(id){
+  const a = articles.find(x=>x.id===id);
+  if(!a||!confirm(`「${a.title}」を削除しますか？`)) return;
+  const idx = articles.findIndex(x=>x.id===id);
+  if(idx>-1) articles.splice(idx,1);
+  localStorage.removeItem('article_img_'+id);
+  await dbDelete('articles', id);
+  renderSettings();
+  renderNews().catch(()=>{});
+  showToast('🗑 記事を削除しました');
 }
 
 function openSettingModal(type, id=null){
@@ -1636,7 +2153,6 @@ function openSettingModal(type, id=null){
   const body = document.getElementById('setting-modal-body');
   const title = document.getElementById('setting-modal-title');
   let data = null;
-
   if(type==='mission'){
     data = id ? missions.find(x=>x.id===id) : null;
     title.textContent = data ? 'ミッションを編集' : 'ミッションを追加';
@@ -1701,11 +2217,80 @@ function openSettingModal(type, id=null){
         </select></div>
         <div class="field form-full"><label>タイトル</label><input id="sm-title" value="${data?data.title:''}" placeholder="タイトルを入力"></div>
         <div class="field form-full"><label>本文</label><textarea id="sm-desc" rows="4">${data?data.body:''}</textarea></div>
+        <div class="field form-full">
+          <label>画像（省略可）</label>
+          <div class="img-upload-zone" id="sm-img-zone"
+            onclick="document.getElementById('sm-img-file').click()"
+            ondragover="event.preventDefault();this.classList.add('drag')"
+            ondragleave="this.classList.remove('drag')"
+            ondrop="handleSmImgDrop(event)">
+            <input type="file" id="sm-img-file" accept="image/*" onchange="handleSmImgSelect(event)">
+            <div id="sm-img-placeholder" ${data&&data.image?'style="display:none"':''}>
+              <div style="font-size:22px;margin-bottom:4px">🖼️</div>
+              <div style="font-size:12px;font-weight:600;margin-bottom:2px">画像をアップロード</div>
+              <div style="font-size:11px;color:var(--text3)">クリックまたはドラッグ＆ドロップ</div>
+            </div>
+          </div>
+          <img id="sm-img-preview" class="img-upload-preview" src="${data&&data.image?data.image:''}" style="${data&&data.image?'display:block':'display:none'}" alt="プレビュー">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <div id="sm-img-filename" class="img-upload-filename" style="${data&&data.image?'display:block':'display:none'}">${data&&data.image?'（既存の画像）':''}</div>
+            <button type="button" id="sm-img-clear" class="btn btn-ghost btn-sm" style="${data&&data.image?'display:inline-flex':'display:none'}" onclick="clearSmImg()">✕ 削除</button>
+          </div>
+        </div>
+        <div class="field"><label>絵文字アイコン（画像なし時）</label><input id="sm-emoji" value="${data&&data.emoji?data.emoji:''}" placeholder="🎉" maxlength="2"></div>
         <div class="field form-full"><label>担当者名</label><input id="sm-author" value="${data?data.author:'採用担当'}" placeholder="採用担当 田村 さくら"></div>
       </div>
-      <button class="btn btn-primary" style="width:100%" onclick="saveSetting('news',${id||'null'})">保存する</button>`;
+      <button class="btn btn-primary" style="width:100%" id="sm-news-save-btn" onclick="saveSetting('news',${id||'null'},this)">保存する</button>`;
+    // 既存画像をsmImgDataUrlにセット（保存時に使う）
+    smImgFile = null;
+    smImgDataUrl = (data && data.image) ? data.image : null;
   }
   modal.classList.add('open');
+}
+
+// ── 設定モーダル用 記事画像アップロード ──
+let smImgFile = null;
+let smImgDataUrl = null;
+
+function handleSmImgSelect(event){
+  const file = event.target.files[0];
+  if(file) setSmImg(file);
+}
+function handleSmImgDrop(event){
+  event.preventDefault();
+  document.getElementById('sm-img-zone').classList.remove('drag');
+  const file = event.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) setSmImg(file);
+}
+function setSmImg(file){
+  smImgFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    smImgDataUrl = e.target.result;
+    const preview = document.getElementById('sm-img-preview');
+    if(preview){ preview.src = smImgDataUrl; preview.style.display = 'block'; }
+    const ph = document.getElementById('sm-img-placeholder');
+    if(ph) ph.style.display = 'none';
+    const fn = document.getElementById('sm-img-filename');
+    if(fn){ fn.textContent = file.name; fn.style.display = 'block'; }
+    const cl = document.getElementById('sm-img-clear');
+    if(cl) cl.style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+function clearSmImg(){
+  smImgFile = null;
+  smImgDataUrl = null;
+  const fi = document.getElementById('sm-img-file');
+  if(fi) fi.value = '';
+  const preview = document.getElementById('sm-img-preview');
+  if(preview){ preview.style.display = 'none'; preview.src = ''; }
+  const ph = document.getElementById('sm-img-placeholder');
+  if(ph) ph.style.display = 'block';
+  const fn = document.getElementById('sm-img-filename');
+  if(fn){ fn.style.display = 'none'; fn.textContent = ''; }
+  const cl = document.getElementById('sm-img-clear');
+  if(cl) cl.style.display = 'none';
 }
 
 function closeSettingModal(e){
@@ -1713,16 +2298,9 @@ function closeSettingModal(e){
     document.getElementById('setting-modal').classList.remove('open');
 }
 
-async function saveSetting(type, id){
+async function saveSetting(type, id, btnEl){
   if(type==='mission'){
-    const record = {
-      icon: document.getElementById('sm-icon').value||'📋',
-      title: document.getElementById('sm-title').value.trim(),
-      description: document.getElementById('sm-desc').value.trim(),
-      cat: document.getElementById('sm-cat').value.trim(),
-      xp: parseInt(document.getElementById('sm-xp').value)||0,
-      submit_type: document.getElementById('sm-submit').value,
-    };
+    const record = {icon: document.getElementById('sm-icon').value||'📋',title: document.getElementById('sm-title').value.trim(),description: document.getElementById('sm-desc').value.trim(),cat: document.getElementById('sm-cat').value.trim(),xp: parseInt(document.getElementById('sm-xp').value)||0,submit_type: document.getElementById('sm-submit').value};
     if(!record.title) return;
     if(id && id!=='null'){
       record.id = id;
@@ -1734,12 +2312,7 @@ async function saveSetting(type, id){
     }
     await dbUpsert('mission_templates', record);
   } else if(type==='schedtype'){
-    const record = {
-      icon: document.getElementById('sm-icon').value||'📅',
-      name: document.getElementById('sm-title').value.trim(),
-      description: document.getElementById('sm-desc').value.trim(),
-      duration: document.getElementById('sm-dur').value.trim()||'30分',
-    };
+    const record = {icon: document.getElementById('sm-icon').value||'📅',name: document.getElementById('sm-title').value.trim(),description: document.getElementById('sm-desc').value.trim(),duration: document.getElementById('sm-dur').value.trim()||'30分'};
     if(!record.name) return;
     if(id && id!=='null'){
       record.id = id;
@@ -1753,14 +2326,7 @@ async function saveSetting(type, id){
   } else if(type==='schedule'){
     const tagMap = {req:'必須参加', dead:'締め切り', opt:'任意参加'};
     const tag = document.getElementById('sm-tag').value;
-    const record = {
-      month: document.getElementById('sm-month').value.trim().toUpperCase(),
-      day: document.getElementById('sm-day').value.trim(),
-      title: document.getElementById('sm-title').value.trim(),
-      detail: document.getElementById('sm-detail').value.trim(),
-      tag,
-      tag_label: document.getElementById('sm-taglabel').value.trim() || tagMap[tag],
-    };
+    const record = {month: document.getElementById('sm-month').value.trim().toUpperCase(),day: document.getElementById('sm-day').value.trim(),title: document.getElementById('sm-title').value.trim(),detail: document.getElementById('sm-detail').value.trim(),tag,tag_label: document.getElementById('sm-taglabel').value.trim() || tagMap[tag]};
     if(!record.title) return;
     if(id && id!=='null'){
       record.id = id;
@@ -1773,27 +2339,58 @@ async function saveSetting(type, id){
     await dbUpsert('schedules', record);
   } else if(type==='news'){
     const today = new Date().toLocaleDateString('ja-JP');
+    const saveBtn = btnEl || document.getElementById('sm-news-save-btn');
+    console.log('saveBtn:', saveBtn);
+    console.log('smImgFile:', smImgFile);
+    console.log('smImgDataUrl:', smImgDataUrl ? smImgDataUrl.slice(0,30) : null);
+
+    // データ収集
     const record = {
       cat: document.getElementById('sm-cat').value,
       imp: document.getElementById('sm-imp').value,
       title: document.getElementById('sm-title').value.trim(),
       body: document.getElementById('sm-desc').value.trim(),
+      image: smImgDataUrl || null,
+      emoji: document.getElementById('sm-emoji').value.trim()||null,
       author: document.getElementById('sm-author').value||'採用担当',
-      is_new: true,
+      is_new: true
     };
     if(!record.title||!record.body) return;
     if(id && id!=='null'){
-      record.id = id;
-      const a = articles.find(x=>x.id===id);
-      if(a){ a.cat=record.cat; a.imp=record.imp; a.title=record.title; a.body=record.body; a.author=record.author; a.isNew=true; }
+      record.id = Number(id);
+      const a = articles.find(x=>x.id===record.id);
+      if(a){ a.cat=record.cat; a.imp=record.imp; a.title=record.title; a.body=record.body; a.emoji=record.emoji; a.author=record.author; a.isNew=true; }
       record.date = a ? a.date : today;
-      record.is_new = a ? (a.isNew||false) : true;
     } else {
       record.id = Date.now();
       record.date = today;
-      articles.push({...record, isNew:record.is_new});
+      articles.push({...record, isNew:true});
     }
-    await dbUpsert('articles', record);
+
+    const finalize = (imageUrl) => {
+      console.log('finalize called with:', imageUrl ? imageUrl.slice(0,30) : null);
+      record.image = imageUrl;
+      const a = articles.find(x=>x.id===record.id);
+      if(a) a.image = imageUrl;
+      if(imageUrl) localStorage.setItem('article_img_'+record.id, imageUrl);
+      else localStorage.removeItem('article_img_'+record.id);
+      smImgFile = null; smImgDataUrl = null;
+      // ボタンを完了表示に変えてからモーダルを閉じる
+      if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='✅ 更新完了！'; saveBtn.style.background='var(--green)'; }
+      setTimeout(()=>{
+        document.getElementById('setting-modal').classList.remove('open');
+        renderSettings();
+        renderNews().catch(()=>{});
+        showToast(id && id!=='null' ? '✅ 記事を更新しました' : '📰 記事を追加しました');
+        if(saveBtn){ saveBtn.textContent='保存する'; saveBtn.style.background=''; }
+      }, 800);
+      // DB保存はバックグラウンド
+      dbUpsert('articles', record).catch(e=>console.warn(e));
+    };
+
+    // smImgDataUrlはsetSmImg()で既に読み込み済みなのでそのまま使う
+    finalize(smImgDataUrl || null);
+    return;
   }
   closeSettingModal();
   renderSettings();
@@ -1802,7 +2399,7 @@ async function saveSetting(type, id){
 }
 
 async function deleteSetting(type, id){
-  const labels = {mission:'ミッション', schedtype:'面談種類', schedule:'スケジュール'};
+  const labels = {mission:'ミッション', schedtype:'面談種類', schedule:'スケジュール', news:'記事'};
   if(!confirm(`この${labels[type]}を削除しますか？`)) return;
   if(type==='mission'){
     const idx = missions.findIndex(x=>x.id===id);
@@ -1836,38 +2433,22 @@ function showToast(msg){
 // ═══════════ LOGIN ═══════════
 let loggedInCandidate = null;
 
-function loginErrHide(){
-  document.getElementById('login-err').classList.remove('show');
-}
-
-function loginErr(msg){
-  const el = document.getElementById('login-err');
-  el.textContent = msg;
-  el.classList.add('show');
-}
+function loginErrHide(){document.getElementById('login-err').classList.remove('show')}
+function loginErr(msg){const el = document.getElementById('login-err');el.textContent = msg;el.classList.add('show')}
 
 async function doLogin(){
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const password = document.getElementById('login-password').value;
-
   if(!email){ loginErr('メールアドレスを入力してください'); return; }
   if(!password){ loginErr('パスワードを入力してください'); return; }
-
-  // candidatesからメール照合
   const candidate = candidates.find(c => (c.email||'').toLowerCase() === email);
   if(!candidate){ loginErr('このメールアドレスは登録されていません'); return; }
-
   if(!candidate.password){
-    // 初回ログイン：パスワードを設定して保存
     candidate.password = password;
     await dbUpsert('candidates', {...candidate});
     loginSuccess(candidate);
   } else {
-    // 2回目以降：パスワード照合
-    if(candidate.password !== password){
-      loginErr('パスワードが違います');
-      return;
-    }
+    if(candidate.password !== password){ loginErr('パスワードが違います'); return; }
     loginSuccess(candidate);
   }
 }
@@ -1877,8 +2458,6 @@ function loginSuccess(candidate){
   document.getElementById('login-overlay').style.display = 'none';
   document.querySelector('.topbar').style.display='flex';
   document.querySelector('.body-wrap').style.display='flex';
-
-  // 内定者モードで表示
   document.getElementById('nav-candidates').style.display='none';
   document.getElementById('nav-dashboard').style.display='none';
   document.getElementById('nav-team').style.display='none';
@@ -1887,14 +2466,10 @@ function loginSuccess(candidate){
   document.getElementById('add-news-btn').style.display='none';
   document.getElementById('mode-admin').style.display='none';
   document.getElementById('mode-user').style.display='none';
-
-  // 右上の名前を更新（topbar-nameは削除済みのためスキップ）
   document.getElementById('sf-name').textContent = candidate.name;
   document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';
   document.getElementById('sf-av').textContent = candidate.name.charAt(0);
   document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--green),#059669)';
-
-  // ログアウトボタンを追加
   const topbarRight = document.querySelector('.topbar-right');
   if(!document.getElementById('logout-btn')){
     const btn = document.createElement('button');
@@ -1904,20 +2479,12 @@ function loginSuccess(candidate){
     btn.onclick = doLogout;
     topbarRight.insertBefore(btn, topbarRight.firstChild);
   }
-
-  // ミッション進捗を復元
   const prog = missionProgress[candidate.id]||{};
   xp = 0;
   missions.forEach(m=>{
     const p = prog[m.id];
-    if(p && p.done){
-      m.done = true;
-      m.submittedFile = p.submittedFile||null;
-      xp += p.xp||m.xp;
-    } else {
-      m.done = false;
-      m.submittedFile = null;
-    }
+    if(p && p.done){ m.done = true; m.submittedFile = p.submittedFile||null; xp += p.xp||m.xp; }
+    else { m.done = false; m.submittedFile = null; }
   });
   nav('missions', document.getElementById('nav-missions'));
 }
@@ -1929,7 +2496,6 @@ function doLogout(){
   document.getElementById('login-password').value = '';
   document.getElementById('login-new-pass-msg').classList.remove('show');
   loginErrHide();
-  // モード切替ボタンを戻す
   document.getElementById('mode-admin').style.display='';
   document.getElementById('mode-user').style.display='';
 }
@@ -1947,13 +2513,10 @@ function goAdminMode(){
   document.getElementById('nav-settings').style.display='flex';
   document.getElementById('lbl-main').style.display='block';
   document.getElementById('add-news-btn').style.display='inline-flex';
-  
   document.getElementById('sf-name').textContent='田村 さくら';
   document.getElementById('sf-role').textContent='採用担当';
   document.getElementById('sf-av').textContent='田';
   document.querySelector('.sf-avatar').style.background='linear-gradient(135deg,var(--accent),var(--accent2))';
-
-  // 管理者からログアウトボタンを削除・内定者ログインに戻るボタン追加
   const lb = document.getElementById('logout-btn');
   if(lb) lb.remove();
   const topbarRight = document.querySelector('.topbar-right');
@@ -1965,7 +2528,6 @@ function goAdminMode(){
     btn.onclick = backToLogin;
     topbarRight.insertBefore(btn, topbarRight.firstChild);
   }
-
   nav('dashboard', document.getElementById('nav-dashboard'));
 }
 
@@ -1983,7 +2545,6 @@ async function init(){
   document.body.appendChild(loading);
   await loadAll();
   document.body.removeChild(loading);
-  // 起動時はログイン画面を表示（管理者画面は非表示）
   document.querySelector('.topbar').style.display='none';
   document.querySelector('.body-wrap').style.display='none';
 }

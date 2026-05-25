@@ -1526,11 +1526,13 @@ function renderNewsCard(a){
 function quickLike(id, el){
   if(articleLikes[id]){ delete articleLikes[id]; }
   else { articleLikes[id] = 1; }
-  // フィードを部分再描画
-  const a = articles.find(x=>x.id===id);
-  if(!a) return;
-  const card = el.closest('.news-card');
-  if(card){ card.outerHTML = renderNewsCard(a); }
+  const likes = articleLikes[id] || 0;
+  const isLiked = !!articleLikes[id];
+  // ボタンだけ更新（カード全体を再描画すると画像が消えるため）
+  el.innerHTML = (isLiked ? '❤️' : '🤍') + (likes > 0 ? ' ' + likes : '');
+  el.className = 'nc-action' + (isLiked ? ' liked' : '');
+  el.onclick = (e) => { e.stopPropagation(); quickLike(id, el); };
+  if(typeof saveState === 'function') try { saveState(); } catch(e){}
 }
 
 async function deleteNews(id){

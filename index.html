@@ -1350,18 +1350,16 @@ function handleNewsImgDrop(event){
 }
 function setNewsImg(file){
   newsImgFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    newsImgDataUrl = e.target.result;
+  compressImageFile(file).then(dataUrl => {
+    newsImgDataUrl = dataUrl;
     const preview = document.getElementById('an-img-preview');
-    preview.src = newsImgDataUrl;
-    preview.style.display = 'block';
+    if(preview){ preview.src = dataUrl; preview.style.display = 'block'; }
     document.getElementById('an-img-placeholder').style.display = 'none';
-    document.getElementById('an-img-filename').textContent = file.name;
-    document.getElementById('an-img-filename').style.display = 'block';
-    document.getElementById('an-img-clear').style.display = 'inline-flex';
-  };
-  reader.readAsDataURL(file);
+    const fn = document.getElementById('an-img-filename');
+    if(fn){ fn.textContent = file.name; fn.style.display = 'block'; }
+    const cl = document.getElementById('an-img-clear');
+    if(cl) cl.style.display = 'inline-flex';
+  });
 }
 function clearNewsImg(){
   newsImgFile = null;
@@ -1377,15 +1375,25 @@ function resetNewsImgField(){
   clearNewsImg();
 }
 
-// 画像をbase64に変換（Canvas不使用・シンプル）
-async function uploadNewsImage(file){
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
+// 画像をCanvas圧縮してbase64に変換（最大幅800px / JPEG 72%）
+async function compressImageFile(file, maxWidth=800, quality=0.72){
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
   });
 }
+async function uploadNewsImage(file){ return compressImageFile(file); }
 
 // 記事詳細を開く
 function openArticle(id){
@@ -2499,19 +2507,17 @@ function handleSmImgDrop(event){
 }
 function setSmImg(file){
   smImgFile = file;
-  const reader = new FileReader();
-  reader.onload = e => {
-    smImgDataUrl = e.target.result;
+  compressImageFile(file).then(dataUrl => {
+    smImgDataUrl = dataUrl;
     const preview = document.getElementById('sm-img-preview');
-    if(preview){ preview.src = smImgDataUrl; preview.style.display = 'block'; }
+    if(preview){ preview.src = dataUrl; preview.style.display = 'block'; }
     const ph = document.getElementById('sm-img-placeholder');
     if(ph) ph.style.display = 'none';
     const fn = document.getElementById('sm-img-filename');
     if(fn){ fn.textContent = file.name; fn.style.display = 'block'; }
     const cl = document.getElementById('sm-img-clear');
     if(cl) cl.style.display = 'inline-flex';
-  };
-  reader.readAsDataURL(file);
+  });
 }
 function clearSmImg(){
   smImgFile = null;

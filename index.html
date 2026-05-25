@@ -949,30 +949,38 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 
 // ═══════════ LOCAL STORAGE PERSISTENCE ═══════════
-const LS_KEY = 'onboard_v2';
+const LS_KEY = 'onboard_v3';
 
 function saveState() {
   try {
     const imgMap = {};
-    articles.forEach(a => { if(a.image) imgMap[a.id] = a.image; });
+    articles.forEach(a => { if(a.image) imgMap[String(a.id)] = a.image; });
     const state = {
       candidates,
       articles: articles.map(({image, ...rest}) => rest),
       articleImages: imgMap,
-      missions,
+      missions: missions.map(({_pendingFile, ...rest}) => rest),
       schedTypes: [...schedTypes],
       schedules: [...schedules],
       recruiters,
       missionProgress,
       articleLikes,
-      ts: Date.now()
+      savedAt: Date.now()
     };
     localStorage.setItem(LS_KEY, JSON.stringify(state));
   } catch(e) {
+    // 画像なしで再試行
     try {
-      const state = { candidates, articles: articles.map(a=>({...a,image:null})),
-        articleImages:{}, missions, schedTypes:[...schedTypes], schedules:[...schedules],
-        recruiters, missionProgress, articleLikes, ts: Date.now() };
+      const state = {
+        candidates,
+        articles: articles.map(a => ({...a, image: null})),
+        articleImages: {},
+        missions: missions.map(({_pendingFile, ...rest}) => rest),
+        schedTypes: [...schedTypes],
+        schedules: [...schedules],
+        recruiters, missionProgress, articleLikes,
+        savedAt: Date.now()
+      };
       localStorage.setItem(LS_KEY, JSON.stringify(state));
     } catch(e2) { console.warn('saveState failed:', e2); }
   }
@@ -982,18 +990,17 @@ function loadState() {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return null;
-    const s = JSON.parse(raw);
-    return s;
+    return JSON.parse(raw);
   } catch(e) { return null; }
 }
 
-function mergeWithSupabase(local, remote, idKey='id') {
-  // ローカルにあってSupabaseにないものを保持する
-  if (!remote || remote.length === 0) return local && local.length ? local : [];
+// localを優先：同じIDがある場合はlocalのデータを使う
+function mergeData(local, remote, idKey='id') {
+  if (!remote || remote.length === 0) return (local && local.length) ? local : [];
   if (!local  || local.length  === 0) return remote;
-  const remoteIds = new Set(remote.map(x => x[idKey]));
-  const localOnly = local.filter(x => !remoteIds.has(x[idKey]));
-  return [...remote, ...localOnly];
+  const localIds = new Set(local.map(x => String(x[idKey])));
+  const remoteOnly = remote.filter(x => !localIds.has(String(x[idKey])));
+  return [...local, ...remoteOnly];
 }
 
 async function dbFetch(table){
@@ -1024,21 +1031,21 @@ async function dbDelete(table, id){
 let missionProgress = {};
 
 async function loadAll(){
-  // ① まずlocalStorageから即時復元
+  // ① localStorageから即時復元（最優先）
   const local = loadState();
   if(local) {
     if(local.candidates?.length)   candidates = local.candidates;
     if(local.articles?.length) {
       articles = local.articles;
-      if(local.articleImages) {
-        articles.forEach(a => {
-          if(local.articleImages[a.id]) a.image = local.articleImages[a.id];
-          else {
-            const cached = localStorage.getItem('article_img_'+a.id);
-            if(cached) a.image = cached;
-          }
-        });
-      }
+      // 画像を復元
+      articles.forEach(a => {
+        const imgKey = String(a.id);
+        if(local.articleImages?.[imgKey]) a.image = local.articleImages[imgKey];
+        else {
+          const cached = localStorage.getItem('article_img_'+a.id);
+          if(cached) a.image = cached;
+        }
+      });
     }
     if(local.missions?.length)   missions = local.missions;
     if(local.schedTypes?.length) { schedTypes.length=0; local.schedTypes.forEach(x=>schedTypes.push(x)); }
@@ -1048,7 +1055,7 @@ async function loadAll(){
     if(local.articleLikes)       Object.assign(articleLikes, local.articleLikes);
   }
 
-  // ② Supabaseから取得してマージ（失敗しても①のデータは維持）
+  // ② Supabaseから取得（localに無いデータだけ追加、localが優先）
   try{
     const [r, c, a, mp, mt, st, sc] = await Promise.all([
       dbFetch('recruiters').catch(()=>[]),
@@ -1060,21 +1067,24 @@ async function loadAll(){
       dbFetch('schedules').catch(()=>[]),
     ]);
 
-    if(r && r.length > 0) recruiters = mergeWithSupabase(recruiters, r);
-    if(c && c.length > 0) candidates = mergeWithSupabase(candidates, c);
+    if(r && r.length > 0) recruiters = mergeData(recruiters, r);
+    if(c && c.length > 0) candidates = mergeData(candidates, c);
+
     if(a && a.length > 0) {
       const sbArticles = a.map(x=>({...x, isNew: x.is_new}));
-      articles = mergeWithSupabase(articles, sbArticles);
+      articles = mergeData(articles, sbArticles); // local優先
       // 画像をlocalStorageから復元
       articles.forEach(art => {
-        if(!art.image){
-          const ls = local?.articleImages?.[art.id];
-          const cached = localStorage.getItem('article_img_'+art.id);
-          if(ls) art.image = ls;
+        if(!art.image) {
+          const imgKey = String(art.id);
+          const fromLocal = local?.articleImages?.[imgKey];
+          const cached    = localStorage.getItem('article_img_'+art.id);
+          if(fromLocal) art.image = fromLocal;
           else if(cached) art.image = cached;
         }
       });
     }
+
     if(mp && mp.length > 0){
       missionProgress = {};
       mp.forEach(row => {
@@ -1095,7 +1105,7 @@ async function loadAll(){
     }
   } catch(e){ console.warn('loadAll error', e); }
 
-  // ③ マージ後の最新状態をlocalStorageに保存
+  // ③ マージ後の最新状態を保存
   saveState();
 }
 
@@ -2242,9 +2252,9 @@ async function addSettingsNews(){
   document.getElementById('add-news-modal-title').textContent = '記事・お知らせを追加';
   // 画面を更新してトースト
   renderSettings();
-  saveState();
   renderNews().catch(()=>{});
   await dbUpsert('articles', record);
+  saveState();
   showToast('📰 記事を追加しました');
 }
 
@@ -2301,6 +2311,7 @@ async function updateSettingsNews(id){
   renderSettings();
   renderNews().catch(()=>{});
   await dbUpsert('articles', {id:a.id,cat:a.cat,title:a.title,body:a.body,image:a.image||null,emoji:a.emoji,author:a.author,date:a.date,is_new:a.isNew||false,imp:a.imp});
+  saveState();
   showToast('✅ 記事を更新しました');
 }
 
@@ -2313,6 +2324,7 @@ async function deleteSettingsNews(id){
   await dbDelete('articles', id);
   renderSettings();
   renderNews().catch(()=>{});
+  saveState();
   showToast('🗑 記事を削除しました');
 }
 
@@ -2562,8 +2574,8 @@ async function saveSetting(type, id, btnEl){
   }
   closeSettingModal();
   renderSettings();
-  saveState();
   renderNews().catch(()=>{});
+  saveState();
   showToast('✅ 保存しました');
 }
 

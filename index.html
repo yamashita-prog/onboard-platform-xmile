@@ -465,6 +465,35 @@ tbody tr:hover td{background:var(--s2)}
 .badge-name{font-size:11px;font-weight:700;margin-bottom:2px}
 .badge-cond{font-size:10px;color:var(--text2);line-height:1.4}
 
+
+/* ── MATCHING ── */
+.match-step-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;box-shadow:0 2px 8px rgba(0,80,140,.05);max-width:640px}
+.filter-section{margin-bottom:20px}
+.filter-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:10px}
+.filter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.filter-grid.cols2{grid-template-columns:repeat(2,1fr)}
+.filter-grid.cols5{grid-template-columns:repeat(5,1fr)}
+.filter-chip{background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s}
+.filter-chip:hover{border-color:var(--accent);background:rgba(26,127,191,.05)}
+.filter-chip.sel{border-color:var(--accent);background:rgba(26,127,191,.1);color:var(--accent)}
+.filter-chip .fc-icon{font-size:20px;margin-bottom:5px}
+.filter-chip .fc-label{font-size:12px;font-weight:600}
+.offer-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;transition:box-shadow .2s}
+.offer-card:hover{box-shadow:0 4px 16px rgba(0,80,140,.1)}
+.offer-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.offer-name{font-size:14px;font-weight:700}
+.offer-date{font-size:11px;color:var(--text3)}
+.offer-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.offer-tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(26,127,191,.1);color:var(--accent)}
+.offer-purpose{font-size:13px;color:var(--text2);line-height:1.7;background:var(--s2);border-radius:8px;padding:10px 12px}
+.offer-status{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px}
+.os-new{background:rgba(220,38,38,.1);color:var(--red)}
+.os-done{background:rgba(5,150,105,.1);color:var(--green)}
+.match-confirm-box{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.match-confirm-row{display:flex;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.match-confirm-row:last-child{border-bottom:none}
+.match-confirm-key{color:var(--text2);min-width:80px;font-size:12px;font-weight:600}
+
 /* scrollbar */
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-track{background:var(--s2)}
@@ -553,11 +582,13 @@ tbody tr:hover td{background:var(--s2)}
     <div class="nav-item" onclick="nav('team',this)" id="nav-team"><span class="nav-icon">🧑‍💼</span><span class="nav-label">担当者管理</span></div>
     <div class="nav-item" onclick="nav('news',this)"><span class="nav-icon">📰</span><span class="nav-label">週報・お知らせ</span><span class="nav-badge red">新</span></div>
     <div class="nav-item" onclick="nav('settings',this)" id="nav-settings"><span class="nav-icon">⚙️</span><span class="nav-label">設定</span></div>
+    <div class="nav-item" id="nav-offers" onclick="nav('offers',this)"><span class="nav-icon">💌</span><span class="nav-label">交流オファー</span><span class="nav-badge red" id="offer-badge" style="display:none">新</span></div>
   </div>
   <div class="sidebar-section">
     <div class="sidebar-label">内定者向け</div>
     <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
+    <div class="nav-item" id="nav-matching" onclick="nav('matching',this)"><span class="nav-icon">💼</span><span class="nav-label">社員交流マッチング</span></div>
     <div class="nav-item" onclick="nav('timeline',this)"><span class="nav-icon">🗓</span><span class="nav-label">入社スケジュール</span></div>
   </div>
   <div class="sidebar-footer" style="display:none">
@@ -769,6 +800,43 @@ tbody tr:hover td{background:var(--s2)}
   </div>
 </div>
 
+
+<!-- ===== MATCHING (内定者向け) ===== -->
+<div class="page" id="page-matching">
+  <div class="page-header">
+    <div class="page-eyebrow">Employee Matching</div>
+    <div class="page-title">社員交流マッチング</div>
+    <div class="page-sub">話してみたい社員の条件を選んで、採用担当に交流オファーを送ろう</div>
+  </div>
+  <div class="match-step-card">
+    <div class="card-head">
+      <h2 id="match-step-title">STEP 1 — 話したい部署を選ぶ</h2>
+      <div class="step-indicator">
+        <div class="step-dot active" id="mdot-1"></div>
+        <div class="step-dot" id="mdot-2"></div>
+        <div class="step-dot" id="mdot-3"></div>
+        <div class="step-dot" id="mdot-4"></div>
+      </div>
+    </div>
+    <div style="padding:24px" id="match-body"></div>
+  </div>
+</div>
+
+<!-- ===== OFFERS (管理者向け) ===== -->
+<div class="page" id="page-offers">
+  <div class="page-header">
+    <div class="page-eyebrow">Matching Offers</div>
+    <div class="page-title">社員交流オファー管理</div>
+    <div class="page-sub">内定者から届いた社員交流リクエスト一覧</div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap" id="offer-filter-bar">
+    <button class="btn btn-ghost btn-sm offer-filter-btn active" onclick="filterOffers('all',this)">すべて</button>
+    <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('new',this)">未対応</button>
+    <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('done',this)">対応済み</button>
+  </div>
+  <div id="offers-list"></div>
+</div>
+
 </div><!-- /main -->
 </div><!-- /body-wrap -->
 
@@ -965,6 +1033,7 @@ function saveState() {
       recruiters,
       missionProgress,
       articleLikes,
+      matchingOffers,
       ts: Date.now()
     };
     localStorage.setItem(LS_KEY, JSON.stringify(payload));
@@ -1003,6 +1072,7 @@ function restoreState() {
     if (s.recruiters?.length)  recruiters = s.recruiters;
     if (s.missionProgress)     missionProgress = s.missionProgress;
     if (s.articleLikes)        Object.assign(articleLikes, s.articleLikes);
+    if (s.matchingOffers?.length) matchingOffers = s.matchingOffers;
     return true;
   } catch(e) { console.warn('restoreState error:', e); return false; }
 }
@@ -1093,6 +1163,9 @@ async function loadAll(){
     }
   } catch(e){ console.warn('loadAll error', e); }
 
+  // matching offers
+  try{ const mo=await dbFetch('matching_offers').catch(()=>[]); if(mo?.length) matchingOffers=mergeRemote(matchingOffers,mo); } catch(e){}
+  updateOfferBadge();
   // ③ マージ後を保存
   saveState();
 }
@@ -1109,6 +1182,7 @@ function setMode(m){
     document.getElementById('nav-dashboard').style.display='flex';
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('nav-settings').style.display='flex';
+    const offerNav=document.getElementById('nav-offers'); if(offerNav) offerNav.style.display='flex';
     document.getElementById('lbl-main').style.display='block';
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
@@ -1121,6 +1195,7 @@ function setMode(m){
     document.getElementById('nav-dashboard').style.display='none';
     document.getElementById('nav-team').style.display='none';
     document.getElementById('nav-settings').style.display='none';
+    const offerNavU=document.getElementById('nav-offers'); if(offerNavU) offerNavU.style.display='none';
     document.getElementById('lbl-main').style.display='none';
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
@@ -1145,6 +1220,8 @@ function nav(page,el){
   if(page==='schedule') renderSchedStep();
   if(page==='timeline') renderTimeline();
   if(page==='settings') renderSettings();
+  if(page==='matching'){ renderMatchStep(); }
+  if(page==='offers')  { renderOffers(); }
 }
 
 // ═══════════ DASHBOARD ═══════════
@@ -2579,6 +2656,225 @@ async function deleteSetting(type, id){
   }
   renderSettings();
   showToast('🗑 削除しました');
+}
+
+
+// ═══════════ MATCHING DATA ═══════════
+let matchingOffers = [];
+let mState = { step:1, depts:[], gender:null, career:null, age:null, purpose:'' };
+let offerFilter = 'all';
+
+const deptOpts = [
+  {id:'sales',    icon:'💼', label:'営業'},
+  {id:'marketing',icon:'📊', label:'マーケティング'},
+  {id:'biz',      icon:'🚀', label:'事業推進'},
+  {id:'newbiz',   icon:'💡', label:'新規事業開発'},
+  {id:'hr',       icon:'👥', label:'人事'},
+];
+const genderOpts = [
+  {id:'female',icon:'👩',label:'女性'},
+  {id:'male',  icon:'👨',label:'男性'},
+  {id:'any',   icon:'🤝',label:'どちらでも'},
+];
+const careerOpts = [
+  {id:'newgrad',icon:'🎓',label:'新卒'},
+  {id:'mid',   icon:'💼',label:'中途'},
+  {id:'any',   icon:'🤝',label:'どちらでも'},
+];
+const ageOpts = [
+  {id:'20s',icon:'🌱',label:'20代'},
+  {id:'30s',icon:'⭐',label:'30代'},
+  {id:'any',icon:'🤝',label:'どちらでも'},
+];
+
+// ── ナビ描画 ──
+function renderMatchStep(){
+  const titles = ['話したい部署を選ぶ','属性の希望を選ぶ','面談の目的・背景を入力','内容を確認する'];
+  document.getElementById('match-step-title').textContent = `STEP ${mState.step} — ${titles[mState.step-1]||'完了'}`;
+  for(let i=1;i<=4;i++){
+    const d = document.getElementById('mdot-'+i);
+    d.className='step-dot'+(i===mState.step?' active':i<mState.step?' done':'');
+  }
+  const body = document.getElementById('match-body');
+
+  if(mState.step===1){
+    body.innerHTML=`
+      <div class="filter-section">
+        <div class="filter-label">部署（複数選択OK）</div>
+        <div class="filter-grid cols5">
+          ${deptOpts.map(d=>`<div class="filter-chip ${mState.depts.includes(d.id)?'sel':''}" onclick="toggleDept('${d.id}')">
+            <div class="fc-icon">${d.icon}</div><div class="fc-label">${d.label}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" ${mState.depts.length?'':'disabled'} onclick="mState.step=2;renderMatchStep()">次へ →</button>`;
+
+  } else if(mState.step===2){
+    const renderRow = (label, opts, key) => `
+      <div class="filter-section">
+        <div class="filter-label">${label}</div>
+        <div class="filter-grid cols${opts.length}">
+          ${opts.map(o=>`<div class="filter-chip ${mState[key]===o.id?'sel':''}" onclick="mState['${key}']='${o.id}';renderMatchStep()">
+            <div class="fc-icon">${o.icon}</div><div class="fc-label">${o.label}</div>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    const allSel = mState.gender && mState.career && mState.age;
+    body.innerHTML=`
+      ${renderRow('性別の希望', genderOpts, 'gender')}
+      ${renderRow('入社区分', careerOpts, 'career')}
+      ${renderRow('年代の希望', ageOpts, 'age')}
+      <div style="display:flex;justify-content:space-between;margin-top:8px">
+        <button class="btn btn-ghost" onclick="mState.step=1;renderMatchStep()">← 戻る</button>
+        <button class="btn btn-primary" style="padding:9px 20px" ${allSel?'':'disabled'} onclick="mState.step=3;renderMatchStep()">次へ →</button>
+      </div>`;
+
+  } else if(mState.step===3){
+    body.innerHTML=`
+      <div class="filter-section">
+        <div class="filter-label">面談の目的・背景（必須）</div>
+        <textarea id="match-purpose" rows="5" style="width:100%;font-family:'Noto Sans JP',sans-serif;font-size:14px;color:var(--text);background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;outline:none;resize:none;line-height:1.8;transition:border-color .2s"
+          placeholder="例：就業前にリアルな仕事内容を聞いてみたい。特に営業の一日の流れや、入社してから身についたスキルについて話を聞けると嬉しいです。"
+          oninput="mState.purpose=this.value;document.getElementById('match-next-3').disabled=!this.value.trim()"
+        >${mState.purpose}</textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">※ 採用担当がこの内容をもとに最適な社員とのマッチングを行います</div>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn btn-ghost" onclick="mState.step=2;renderMatchStep()">← 戻る</button>
+        <button class="btn btn-primary" id="match-next-3" style="padding:9px 20px" ${mState.purpose.trim()?'':'disabled'} onclick="mState.step=4;renderMatchStep()">確認する →</button>
+      </div>`;
+
+  } else if(mState.step===4){
+    const deptLabels = mState.depts.map(d=>deptOpts.find(o=>o.id===d)?.label||d).join('、');
+    const gLabel = genderOpts.find(o=>o.id===mState.gender)?.label||'';
+    const cLabel = careerOpts.find(o=>o.id===mState.career)?.label||'';
+    const aLabel = ageOpts.find(o=>o.id===mState.age)?.label||'';
+    body.innerHTML=`
+      <div class="match-confirm-box">
+        <div class="match-confirm-row"><span class="match-confirm-key">希望部署</span><span>${deptLabels}</span></div>
+        <div class="match-confirm-row"><span class="match-confirm-key">性別</span><span>${gLabel}</span></div>
+        <div class="match-confirm-row"><span class="match-confirm-key">入社区分</span><span>${cLabel}</span></div>
+        <div class="match-confirm-row"><span class="match-confirm-key">年代</span><span>${aLabel}</span></div>
+        <div class="match-confirm-row"><span class="match-confirm-key">目的・背景</span><span style="line-height:1.7">${mState.purpose}</span></div>
+      </div>
+      <div style="background:rgba(26,127,191,.06);border:1px solid rgba(26,127,191,.18);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--accent);margin-bottom:16px">
+        📨 送信すると採用担当者に通知されます。条件に合った社員とのマッチングを調整します。
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <button class="btn btn-ghost" onclick="mState.step=3;renderMatchStep()">← 修正する</button>
+        <button class="btn btn-primary" style="padding:9px 20px" onclick="submitMatchOffer()">📨 オファーを送る</button>
+      </div>`;
+
+  } else if(mState.step===5){
+    document.getElementById('match-step-title').textContent = '送信完了！';
+    body.innerHTML=`
+      <div style="text-align:center;padding:32px 0">
+        <div style="font-size:52px;margin-bottom:16px;animation:popIn .4s cubic-bezier(.34,1.56,.64,1)">🎉</div>
+        <h3 style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-bottom:10px">オファーを送りました！</h3>
+        <p style="font-size:13px;color:var(--text2);line-height:1.8">採用担当者があなたの希望に合った社員とのマッチングを進めます。<br>日程が決まり次第ご連絡します。</p>
+        <div style="background:rgba(5,150,105,.07);border:1px solid rgba(5,150,105,.2);border-radius:10px;padding:14px;margin:20px 0;text-align:left">
+          <div style="font-size:12px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 送信済みの希望条件</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.9">
+            部署：${mState.depts.map(d=>deptOpts.find(o=>o.id===d)?.label||d).join('・')}<br>
+            属性：${genderOpts.find(o=>o.id===mState.gender)?.label} / ${careerOpts.find(o=>o.id===mState.career)?.label} / ${ageOpts.find(o=>o.id===mState.age)?.label}<br>
+            目的：${mState.purpose}
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="resetMatchState()">← 別のオファーを送る</button>
+      </div>`;
+  }
+}
+
+function toggleDept(id){
+  const i = mState.depts.indexOf(id);
+  if(i>-1) mState.depts.splice(i,1); else mState.depts.push(id);
+  renderMatchStep();
+}
+
+async function submitMatchOffer(){
+  if(!loggedInCandidate) return;
+  const offer = {
+    id: Date.now(),
+    candidateId: loggedInCandidate.id,
+    candidateName: loggedInCandidate.name,
+    depts: [...mState.depts],
+    gender: mState.gender,
+    career: mState.career,
+    age: mState.age,
+    purpose: mState.purpose,
+    status: 'new',
+    createdAt: new Date().toLocaleDateString('ja-JP')
+  };
+  matchingOffers.push(offer);
+  saveState();
+  // Supabaseへ保存（テーブルがあれば）
+  try { await dbUpsert('matching_offers', offer); } catch(e){}
+  // バッジ更新
+  updateOfferBadge();
+  mState.step = 5;
+  renderMatchStep();
+  showToast('📨 オファーを送りました！');
+}
+
+function resetMatchState(){
+  mState = {step:1, depts:[], gender:null, career:null, age:null, purpose:''};
+  renderMatchStep();
+}
+
+// ── 管理者：オファー一覧 ──
+function renderOffers(){
+  const filtered = offerFilter==='all' ? matchingOffers
+    : matchingOffers.filter(o=>o.status===offerFilter);
+  const list = document.getElementById('offers-list');
+  if(!list) return;
+  if(filtered.length===0){
+    list.innerHTML=`<div style="text-align:center;padding:60px;color:var(--text3)">
+      <div style="font-size:36px;margin-bottom:8px">📭</div>
+      <div style="font-size:14px">まだオファーがありません</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = [...filtered].reverse().map(o=>{
+    const deptLabels = o.depts.map(d=>deptOpts.find(x=>x.id===d)?.label||d);
+    const tags = [
+      ...deptLabels,
+      genderOpts.find(x=>x.id===o.gender)?.label||'',
+      careerOpts.find(x=>x.id===o.career)?.label||'',
+      ageOpts.find(x=>x.id===o.age)?.label||'',
+    ].filter(Boolean);
+    return `<div class="offer-card">
+      <div class="offer-top">
+        <div>
+          <div class="offer-name">👤 ${o.candidateName}</div>
+          <div class="offer-date">${o.createdAt}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="offer-status ${o.status==='new'?'os-new':'os-done'}">${o.status==='new'?'未対応':'対応済み'}</span>
+          ${o.status==='new'?`<button class="btn btn-ghost btn-sm" onclick="markOfferDone(${o.id})">✅ 対応済みにする</button>`:''}
+        </div>
+      </div>
+      <div class="offer-tags">${tags.map(t=>`<span class="offer-tag">${t}</span>`).join('')}</div>
+      <div class="offer-purpose">"${o.purpose}"</div>
+    </div>`;
+  }).join('');
+}
+
+function markOfferDone(id){
+  const o = matchingOffers.find(x=>x.id===id);
+  if(o){ o.status='done'; saveState(); renderOffers(); updateOfferBadge(); showToast('✅ 対応済みにしました'); }
+}
+
+function filterOffers(type, btn){
+  offerFilter = type;
+  document.querySelectorAll('.offer-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOffers();
+}
+
+function updateOfferBadge(){
+  const badge = document.getElementById('offer-badge');
+  const newCount = matchingOffers.filter(o=>o.status==='new').length;
+  if(badge){ badge.style.display = newCount>0?'':'none'; badge.textContent=newCount>0?newCount+'':''; }
 }
 
 // ═══════════ TOAST ═══════════

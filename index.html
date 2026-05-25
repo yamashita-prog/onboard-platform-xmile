@@ -949,70 +949,51 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 
 // ═══════════ LOCAL STORAGE PERSISTENCE ═══════════
+const LS_KEY = 'onboard_v2';
+
 function saveState() {
   try {
-    const articlesNoImg = articles.map(a => {
-      const {image, ...rest} = a;
-      return rest;
-    });
     const imgMap = {};
     articles.forEach(a => { if(a.image) imgMap[a.id] = a.image; });
     const state = {
       candidates,
-      articles: articlesNoImg,
+      articles: articles.map(({image, ...rest}) => rest),
       articleImages: imgMap,
       missions,
-      schedTypes,
-      schedules,
+      schedTypes: [...schedTypes],
+      schedules: [...schedules],
       recruiters,
       missionProgress,
       articleLikes,
+      ts: Date.now()
     };
-    localStorage.setItem('onboard_v1', JSON.stringify(state));
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
   } catch(e) {
-    // 画像なしで再試行
     try {
-      const state = {
-        candidates,
-        articles: articles.map(a => ({...a, image:null})),
-        articleImages: {},
-        missions, schedTypes, schedules, recruiters, missionProgress, articleLikes,
-      };
-      localStorage.setItem('onboard_v1', JSON.stringify(state));
+      const state = { candidates, articles: articles.map(a=>({...a,image:null})),
+        articleImages:{}, missions, schedTypes:[...schedTypes], schedules:[...schedules],
+        recruiters, missionProgress, articleLikes, ts: Date.now() };
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
     } catch(e2) { console.warn('saveState failed:', e2); }
   }
 }
 
 function loadState() {
   try {
-    const raw = localStorage.getItem('onboard_v1');
-    if (!raw) return false;
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
     const s = JSON.parse(raw);
-    if (s.candidates?.length)   candidates = s.candidates;
-    if (s.articles?.length) {
-      articles = s.articles;
-      // 画像を復元
-      if (s.articleImages) {
-        articles.forEach(a => {
-          if (s.articleImages[a.id]) a.image = s.articleImages[a.id];
-          else {
-            const cached = localStorage.getItem('article_img_'+a.id);
-            if (cached) a.image = cached;
-          }
-        });
-      }
-    }
-    if (s.missions?.length)     missions = s.missions;
-    if (s.schedTypes?.length)   { schedTypes.length=0; s.schedTypes.forEach(x=>schedTypes.push(x)); }
-    if (s.schedules?.length)    { schedules.length=0;  s.schedules.forEach(x=>schedules.push(x)); }
-    if (s.recruiters?.length)   recruiters = s.recruiters;
-    if (s.missionProgress)      missionProgress = s.missionProgress;
-    if (s.articleLikes)         Object.assign(articleLikes, s.articleLikes);
-    return true;
-  } catch(e) {
-    console.warn('loadState failed:', e);
-    return false;
-  }
+    return s;
+  } catch(e) { return null; }
+}
+
+function mergeWithSupabase(local, remote, idKey='id') {
+  // ローカルにあってSupabaseにないものを保持する
+  if (!remote || remote.length === 0) return local && local.length ? local : [];
+  if (!local  || local.length  === 0) return remote;
+  const remoteIds = new Set(remote.map(x => x[idKey]));
+  const localOnly = local.filter(x => !remoteIds.has(x[idKey]));
+  return [...remote, ...localOnly];
 }
 
 async function dbFetch(table){
@@ -1043,7 +1024,31 @@ async function dbDelete(table, id){
 let missionProgress = {};
 
 async function loadAll(){
-  loadState(); // まずlocalStorageから即時復元
+  // ① まずlocalStorageから即時復元
+  const local = loadState();
+  if(local) {
+    if(local.candidates?.length)   candidates = local.candidates;
+    if(local.articles?.length) {
+      articles = local.articles;
+      if(local.articleImages) {
+        articles.forEach(a => {
+          if(local.articleImages[a.id]) a.image = local.articleImages[a.id];
+          else {
+            const cached = localStorage.getItem('article_img_'+a.id);
+            if(cached) a.image = cached;
+          }
+        });
+      }
+    }
+    if(local.missions?.length)   missions = local.missions;
+    if(local.schedTypes?.length) { schedTypes.length=0; local.schedTypes.forEach(x=>schedTypes.push(x)); }
+    if(local.schedules?.length)  { schedules.length=0;  local.schedules.forEach(x=>schedules.push(x)); }
+    if(local.recruiters?.length) recruiters = local.recruiters;
+    if(local.missionProgress)    missionProgress = local.missionProgress;
+    if(local.articleLikes)       Object.assign(articleLikes, local.articleLikes);
+  }
+
+  // ② Supabaseから取得してマージ（失敗しても①のデータは維持）
   try{
     const [r, c, a, mp, mt, st, sc] = await Promise.all([
       dbFetch('recruiters').catch(()=>[]),
@@ -1054,15 +1059,19 @@ async function loadAll(){
       dbFetch('schedule_types').catch(()=>[]),
       dbFetch('schedules').catch(()=>[]),
     ]);
-    if(r && r.length > 0) recruiters = r;
-    if(c && c.length > 0) candidates = c;
+
+    if(r && r.length > 0) recruiters = mergeWithSupabase(recruiters, r);
+    if(c && c.length > 0) candidates = mergeWithSupabase(candidates, c);
     if(a && a.length > 0) {
-      articles = a.map(x=>({...x, isNew: x.is_new}));
-      // DBにimageカラムがない場合のフォールバック: localStorageから画像を復元
+      const sbArticles = a.map(x=>({...x, isNew: x.is_new}));
+      articles = mergeWithSupabase(articles, sbArticles);
+      // 画像をlocalStorageから復元
       articles.forEach(art => {
         if(!art.image){
+          const ls = local?.articleImages?.[art.id];
           const cached = localStorage.getItem('article_img_'+art.id);
-          if(cached) art.image = cached;
+          if(ls) art.image = ls;
+          else if(cached) art.image = cached;
         }
       });
     }
@@ -1085,7 +1094,9 @@ async function loadAll(){
       sc.forEach(s => schedules.push({id: s.id, month: s.month, day: s.day, title: s.title, detail: s.detail||'', tag: s.tag||'req', tagLabel: s.tag_label||''}));
     }
   } catch(e){ console.warn('loadAll error', e); }
-  saveState(); // Supabase取得後にlocalStorageを更新
+
+  // ③ マージ後の最新状態をlocalStorageに保存
+  saveState();
 }
 
 // ═══════════ MODE ═══════════

@@ -1903,24 +1903,31 @@ function renderMissions(){
   document.getElementById('rank-list').innerHTML = rankData.length === 0
     ? `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだ参加者がいません</div>`
     : rankData.map((r,i)=>{
-      const dispEmoji = r.emoji || '？';
-      // 管理者：名前表示。内定者：絵文字のみ（自分だけ「あなた」）
-      const avatarHtml = isAdmin ? r.name.charAt(0) : dispEmoji;
-      const nameHtml = isAdmin
-        ? r.name
-        : (r.me ? `<span style="font-weight:700">${dispEmoji} あなた</span>` : dispEmoji);
-      const sublabelHtml = isAdmin
-        ? `Lv.${r.lv}`
-        : (r.me ? `Lv.${r.lv}` : `Lv.${r.lv}`);
-      return `<div class="rank-item ${r.me?'me':''}">
+      const dispEmoji = r.emoji || '🙂';
+      if(isAdmin){
+        // 管理者：名前・頭文字で表示
+        return `<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
-    <div class="rank-av" style="font-size:${isAdmin?'12px':'18px'}">${avatarHtml}</div>
+    <div class="rank-av">${r.name.charAt(0)}</div>
     <div class="rank-info">
-      <div class="rank-name">${nameHtml}</div>
-      <div class="rank-lv">${sublabelHtml}</div>
+      <div class="rank-name">${r.name}</div>
+      <div class="rank-lv">Lv.${r.lv}</div>
     </div>
     <div class="rank-xp">${r.xp} XP</div>
   </div>`;
+      } else {
+        // 内定者：絵文字のみ・名前は絶対出さない
+        const label = r.me ? 'あなた' : '';
+        return `<div class="rank-item ${r.me?'me':''}">
+    <div class="rank-num ${rc[i]||''}">${i+1}</div>
+    <div class="rank-av" style="font-size:20px">${dispEmoji}</div>
+    <div class="rank-info">
+      <div class="rank-name" style="font-size:20px">${dispEmoji}${r.me?` <span style="font-size:12px;color:var(--accent);font-weight:700">あなた</span>`:''}</div>
+      <div class="rank-lv">Lv.${r.lv}</div>
+    </div>
+    <div class="rank-xp">${r.xp} XP</div>
+  </div>`;
+      }
     }).join('');
 }
 

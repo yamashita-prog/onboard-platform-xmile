@@ -1219,8 +1219,22 @@ async function loadAll(){
   } catch(e){}
 
   updateOfferBadge();
-  // ③ 最新状態を保存
   saveState();
+
+  // ④ Supabaseから取得完了後、現在のページを再描画
+  const activePage = document.querySelector('.page.active');
+  if(activePage){
+    const pageId = activePage.id.replace('page-','');
+    const activeNav = document.querySelector('.nav-item.active');
+    if(pageId==='dashboard') renderDashboard();
+    else if(pageId==='candidates') renderCandidates();
+    else if(pageId==='news') renderNews().catch(()=>{});
+    else if(pageId==='missions') renderMissions();
+    else if(pageId==='timeline') renderTimeline();
+    else if(pageId==='team') renderTeam();
+    else if(pageId==='settings') renderSettings();
+    else if(pageId==='offers') renderOffers();
+  }
 }
 
 // ═══════════ MODE ═══════════

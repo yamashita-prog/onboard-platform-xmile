@@ -40,7 +40,25 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
 .user-name{font-size:12px;font-weight:500}
 .notif-btn{width:32px;height:32px;border-radius:8px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;position:relative}
-.notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--red);border:1.5px solid #fff}
+.notif-dot{position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 3px;border-radius:99px;background:var(--red);border:1.5px solid #fff;display:none;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;font-family:'Outfit',sans-serif}
+.notif-dot.show{display:flex}
+.notif-wrap{position:relative}
+.notif-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:340px;background:var(--s1);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,80,140,.14);z-index:200;overflow:hidden;display:none}
+.notif-dropdown.open{display:block;animation:fadeIn .18s ease}
+.notif-dropdown-head{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.notif-dropdown-head h3{font-size:13px;font-weight:700}
+.notif-clear-btn{font-size:11px;color:var(--accent);cursor:pointer;font-weight:600;border:none;background:none;font-family:'Noto Sans JP',sans-serif;padding:0}
+.notif-list{max-height:320px;overflow-y:auto}
+.notif-item{display:flex;gap:10px;align-items:flex-start;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.notif-item:last-child{border-bottom:none}
+.notif-item:hover{background:var(--s2)}
+.notif-item.unread{background:rgba(26,127,191,.04)}
+.notif-item-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.notif-item-body{flex:1;min-width:0}
+.notif-item-title{font-size:12px;font-weight:600;margin-bottom:2px;line-height:1.5}
+.notif-item-meta{font-size:11px;color:var(--text3)}
+.notif-unread-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:6px}
+.notif-empty{padding:32px 16px;text-align:center;color:var(--text3);font-size:13px}
 
 /* ── LAYOUT ── */
 .body-wrap{display:flex;flex:1;overflow:hidden}
@@ -195,23 +213,23 @@ tbody tr:hover td{background:var(--s2)}
 
 /* 画像サムネイル（記事内） */
 .nc-image{
-  width:100%;
+  width:50%;
   aspect-ratio:16/9;
-  border-radius:12px;
+  border-radius:10px;
   object-fit:cover;
   margin-bottom:10px;
   border:1px solid var(--border);
   background:var(--s3);
   display:flex;align-items:center;justify-content:center;
-  font-size:40px;
+  font-size:24px;
   overflow:hidden;
 }
 .nc-image img{width:100%;height:100%;object-fit:cover}
-.nc-image.has-emoji{font-size:52px}
+.nc-image.has-emoji{font-size:30px}
 
 /* 複数画像グリッド */
-.nc-images-2{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:12px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border)}
-.nc-images-2 .nc-img-item{aspect-ratio:16/9;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden}
+.nc-images-2{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-radius:10px;overflow:hidden;margin-bottom:10px;border:1px solid var(--border);width:50%}
+.nc-images-2 .nc-img-item{aspect-ratio:16/9;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
 .nc-images-2 .nc-img-item img{width:100%;height:100%;object-fit:cover}
 
 /* フッターアクション */
@@ -566,7 +584,18 @@ tbody tr:hover td{background:var(--s2)}
     <button class="mode-btn" id="mode-user" onclick="setMode('user')">内定者</button>
   </div>
   <div class="topbar-right">
-    <div class="notif-btn">🔔<div class="notif-dot"></div></div>
+    <div class="notif-wrap">
+      <div class="notif-btn" id="notif-btn" onclick="toggleNotif()">🔔<div class="notif-dot" id="notif-dot"></div></div>
+      <div class="notif-dropdown" id="notif-dropdown">
+        <div class="notif-dropdown-head">
+          <h3>🔔 通知</h3>
+          <button class="notif-clear-btn" onclick="clearAllNotif()">すべて既読にする</button>
+        </div>
+        <div class="notif-list" id="notif-list">
+          <div class="notif-empty">通知はありません</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -645,7 +674,7 @@ tbody tr:hover td{background:var(--s2)}
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>氏名</th><th>大学・学部</th><th>配属予定</th><th>書類進捗</th><th>ステータス</th><th>操作</th></tr></thead>
+        <thead><tr><th>氏名</th><th>大学・学部</th><th>配属予定</th><th>担当者</th><th>書類進捗</th><th>ステータス</th><th>操作</th></tr></thead>
         <tbody id="cand-table"></tbody>
       </table>
     </div>
@@ -855,6 +884,7 @@ tbody tr:hover td{background:var(--s2)}
         <div class="field"><label>大学・学部</label><input id="ac-univ" placeholder="東京大学 経済学部"></div>
         <div class="field"><label>メール</label><input id="ac-email" placeholder="taro@email.com"></div>
         <div class="field"><label>配属予定部署</label><input id="ac-dept" placeholder="営業部"></div>
+        <div class="field form-full"><label>担当リクルーター</label><select id="ac-recruiter"><option value="">（未割り当て）</option></select></div>
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="addCandidate()">登録する</button>
     </div>
@@ -928,6 +958,18 @@ tbody tr:hover td{background:var(--s2)}
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="setting-modal-title">追加</div><button class="modal-close" onclick="closeSettingModal()">✕</button></div>
     <div class="modal-body" id="setting-modal-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: 担当者割り当て -->
+<div class="modal-overlay" id="assign-rec-modal" onclick="closeAssignRecruiter(event)">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-head"><div class="modal-title" id="assign-rec-title">担当リクルーターを割り当て</div><button class="modal-close" onclick="closeAssignRecruiter()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">この内定者を担当するリクルーターを選択してください。オファーが届いた際に担当者に通知されます。</div>
+      <div class="rec-list" id="assign-rec-list"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="saveAssignRecruiter()">保存する</button>
+    </div>
   </div>
 </div>
 
@@ -1264,14 +1306,21 @@ function schedCard(s){return`<div class="sched-item">
 
 // ═══════════ CANDIDATES ═══════════
 function renderCandidates(){
-  document.getElementById('cand-table').innerHTML=candidates.map(c=>`<tr onclick="openCand(${c.id})">
-    <td><strong>${c.name}</strong><br><span style="font-size:11px;color:var(--text3)">${c.email}</span></td>
-    <td style="color:var(--text2)">${c.univ}</td>
-    <td style="color:var(--text2)">${c.dept}</td>
-    <td><div style="display:flex;align-items:center;gap:8px"><div class="prog-wrap"><div class="prog-bar" style="width:${c.progress}%"></div></div><span style="font-size:11px;color:var(--text2)">${c.progress}%</span></div></td>
-    <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
-    <td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteCandidate(${c.id})">削除</button></td>
-  </tr>`).join('');
+  document.getElementById('cand-table').innerHTML=candidates.map(c=>{
+    const rec = recruiters.find(r=>r.id===c.recruiterId);
+    return `<tr onclick="openCand(${c.id})">
+      <td><strong>${c.name}</strong><br><span style="font-size:11px;color:var(--text3)">${c.email}</span></td>
+      <td style="color:var(--text2)">${c.univ}</td>
+      <td style="color:var(--text2)">${c.dept}</td>
+      <td style="color:var(--text2)">${rec ? rec.av+' '+rec.name : '<span style="color:var(--text3)">未割り当て</span>'}</td>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="prog-wrap"><div class="prog-bar" style="width:${c.progress}%"></div></div><span style="font-size:11px;color:var(--text2)">${c.progress}%</span></div></td>
+      <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openAssignRecruiter(${c.id})">👤 担当変更</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteCandidate(${c.id})">削除</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 async function deleteCandidate(id){
@@ -1293,6 +1342,11 @@ function openCand(id){
       <button class="modal-close" onclick="closeCandModal()">✕</button>
     </div>
     <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;margin-bottom:14px">
+        <span style="font-size:13px;color:var(--text2);font-weight:600">担当リクルーター：</span>
+        ${(()=>{const rec=recruiters.find(r=>r.id===c.recruiterId);return rec?`<span style="font-size:14px">${rec.av}</span><span style="font-size:13px;font-weight:600">${rec.name}</span><span style="font-size:11px;color:var(--text3)">${rec.role}</span>`:'<span style="font-size:12px;color:var(--text3)">未割り当て</span>';})()}
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="closeCandModal();openAssignRecruiter(${id})">変更</button>
+      </div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase">書類チェックリスト</div>
       <div class="check-list">
         ${c.docs.map((d,i)=>`<div class="check-item">
@@ -1317,18 +1371,27 @@ async function toggleDoc(cid,idx){
 }
 
 function closeCandModal(e){if(!e||e.target===document.getElementById('cand-modal'))document.getElementById('cand-modal').classList.remove('open')}
-function openAddCandidate(){document.getElementById('add-cand-modal').classList.add('open')}
+
 function closeAddCandModal(e){if(!e||e.target===document.getElementById('add-cand-modal'))document.getElementById('add-cand-modal').classList.remove('open')}
 
 async function addCandidate(){
   const name=document.getElementById('ac-name').value.trim();
   if(!name) return;
-  candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
+  const recruiterId = document.getElementById('ac-recruiter').value || null;
+  candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',recruiterId,progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
   ['ac-name','ac-univ','ac-dept','ac-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ac-recruiter').value='';
   closeAddCandModal();
   await dbUpsert('candidates', candidates[candidates.length-1]);
   renderCandidates();
   showToast('✅ 内定者を追加しました');
+}
+
+function openAddCandidate(){
+  // 担当者選択肢を動的に生成
+  const sel = document.getElementById('ac-recruiter');
+  sel.innerHTML = '<option value="">（未割り当て）</option>' + recruiters.map(r=>`<option value="${r.id}">${r.av} ${r.name}（${r.role}）</option>`).join('');
+  document.getElementById('add-cand-modal').classList.add('open');
 }
 
 // ═══════════ NEWS (X-STYLE) ═══════════
@@ -2182,6 +2245,52 @@ async function deleteTeamMember(id){
   showToast('🗑 担当者を削除しました');
 }
 
+// ═══════════ ASSIGN RECRUITER ═══════════
+let assigningCandId = null;
+let assigningRecId = null;
+
+function openAssignRecruiter(candId){
+  assigningCandId = candId;
+  const c = candidates.find(x=>x.id===candId);
+  assigningRecId = c?.recruiterId || null;
+  document.getElementById('assign-rec-title').textContent = `担当リクルーターを割り当て：${c?.name}`;
+  const list = document.getElementById('assign-rec-list');
+  list.innerHTML = [
+    {id:null, av:'🚫', name:'未割り当て', role:'担当者なし'},
+    ...recruiters
+  ].map(r=>`
+    <div class="rec-item ${assigningRecId===r.id?'sel':''}" onclick="selectAssignRec(${r.id===null?'null':"'"+r.id+"'"})">
+      <div class="rec-av">${r.av}</div>
+      <div class="rec-info">
+        <div class="rec-name">${r.name}</div>
+        <div class="rec-role">${r.role}</div>
+      </div>
+      ${assigningRecId===r.id?'<span style="color:var(--accent);font-size:16px">✓</span>':''}
+    </div>`).join('');
+  document.getElementById('assign-rec-modal').classList.add('open');
+}
+
+function selectAssignRec(id){
+  assigningRecId = id;
+  openAssignRecruiter(assigningCandId); // 再描画
+}
+
+async function saveAssignRecruiter(){
+  const c = candidates.find(x=>x.id===assigningCandId);
+  if(!c) return;
+  c.recruiterId = assigningRecId || null;
+  closeAssignRecruiter();
+  await dbUpsert('candidates', {...c, docs:c.docs});
+  renderCandidates();
+  const rec = recruiters.find(r=>r.id===assigningRecId);
+  showToast(rec ? `✅ 担当者を ${rec.av}${rec.name} に設定しました` : '✅ 担当者を外しました');
+}
+
+function closeAssignRecruiter(e){
+  if(!e||e.target===document.getElementById('assign-rec-modal'))
+    document.getElementById('assign-rec-modal').classList.remove('open');
+}
+
 // ═══════════ TIMELINE ═══════════
 function renderTimeline(){
   document.getElementById('timeline-list').innerHTML=schedules.map(s=>schedCard(s)).join('');
@@ -2817,6 +2926,30 @@ async function submitMatchOffer(){
   try { await dbUpsert('matching_offers', offer); } catch(e){}
   // バッジ更新
   updateOfferBadge();
+  // 担当者を特定して通知
+  const deptLabels = offer.depts.map(d=>deptOpts.find(o=>o.id===d)?.label||d).join('・');
+  const assignedRec = recruiters.find(r=>r.id===loggedInCandidate.recruiterId);
+  const recLabel = assignedRec ? `担当：${assignedRec.av}${assignedRec.name}` : '担当者未割り当て';
+  addNotification(
+    '💌',
+    `${offer.candidateName}さんから社員交流オファーが届きました`,
+    `${recLabel}　希望部署：${deptLabels}　${offer.createdAt}`,
+    () => {
+      if(!isAdmin){
+        isAdmin = true;
+        document.getElementById('mode-admin').classList.add('active');
+        document.getElementById('mode-user').classList.remove('active');
+        document.getElementById('nav-candidates').style.display='flex';
+        document.getElementById('nav-dashboard').style.display='flex';
+        document.getElementById('nav-team').style.display='flex';
+        document.getElementById('nav-settings').style.display='flex';
+        document.getElementById('lbl-main').style.display='block';
+        document.getElementById('add-news-btn').style.display='inline-flex';
+        const offerNav=document.getElementById('nav-offers'); if(offerNav) offerNav.style.display='flex';
+      }
+      nav('offers', document.getElementById('nav-offers'));
+    }
+  );
   mState.step = 5;
   renderMatchStep();
   showToast('📨 オファーを送りました！');
@@ -2852,7 +2985,7 @@ function renderOffers(){
       <div class="offer-top">
         <div>
           <div class="offer-name">👤 ${o.candidateName}</div>
-          <div class="offer-date">${o.createdAt}</div>
+          <div class="offer-date">${o.createdAt}${(()=>{const c=candidates.find(x=>x.id===o.candidateId);const r=c&&recruiters.find(x=>x.id===c.recruiterId);return r?' · 担当：'+r.av+r.name:' · <span style="color:var(--amber)">担当者未割り当て</span>';})()}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="offer-status ${o.status==='new'?'os-new':'os-done'}">${o.status==='new'?'未対応':'対応済み'}</span>
@@ -2882,6 +3015,79 @@ function updateOfferBadge(){
   const newCount = matchingOffers.filter(o=>o.status==='new').length;
   if(badge){ badge.style.display = newCount>0?'':'none'; badge.textContent=newCount>0?newCount+'':''; }
 }
+
+// ═══════════ NOTIFICATIONS ═══════════
+let notifications = [];
+
+function addNotification(icon, title, meta, onClick){
+  const notif = { id: Date.now(), icon, title, meta, onClick, unread: true };
+  notifications.unshift(notif);
+  renderNotifList();
+  updateNotifBadge();
+}
+
+function updateNotifBadge(){
+  const dot = document.getElementById('notif-dot');
+  const count = notifications.filter(n=>n.unread).length;
+  if(!dot) return;
+  if(count > 0){
+    dot.textContent = count > 9 ? '9+' : count;
+    dot.classList.add('show');
+  } else {
+    dot.textContent = '';
+    dot.classList.remove('show');
+  }
+}
+
+function renderNotifList(){
+  const list = document.getElementById('notif-list');
+  if(!list) return;
+  if(notifications.length === 0){
+    list.innerHTML = '<div class="notif-empty">📭 通知はありません</div>';
+    return;
+  }
+  list.innerHTML = notifications.map(n => `
+    <div class="notif-item ${n.unread?'unread':''}" onclick="clickNotif(${n.id})">
+      <div class="notif-item-icon">${n.icon}</div>
+      <div class="notif-item-body">
+        <div class="notif-item-title">${n.title}</div>
+        <div class="notif-item-meta">${n.meta}</div>
+      </div>
+      ${n.unread ? '<div class="notif-unread-dot"></div>' : ''}
+    </div>`).join('');
+}
+
+function clickNotif(id){
+  const n = notifications.find(x=>x.id===id);
+  if(!n) return;
+  n.unread = false;
+  updateNotifBadge();
+  renderNotifList();
+  closeNotif();
+  if(n.onClick) n.onClick();
+}
+
+function toggleNotif(){
+  const dd = document.getElementById('notif-dropdown');
+  dd.classList.toggle('open');
+  if(dd.classList.contains('open')) renderNotifList();
+}
+
+function closeNotif(){
+  document.getElementById('notif-dropdown')?.classList.remove('open');
+}
+
+function clearAllNotif(){
+  notifications.forEach(n=>n.unread=false);
+  updateNotifBadge();
+  renderNotifList();
+}
+
+// 外クリックで閉じる
+document.addEventListener('click', function(e){
+  const wrap = document.querySelector('.notif-wrap');
+  if(wrap && !wrap.contains(e.target)) closeNotif();
+});
 
 // ═══════════ TOAST ═══════════
 function showToast(msg){

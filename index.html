@@ -1078,7 +1078,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 
 // ═══════════ LOCAL STORAGE PERSISTENCE ═══════════
-const LS_KEY = 'onboard_v4';
+const LS_KEY = 'onboard_v5'; // バージョンアップでキャッシュリセット
 
 function saveState() {
   try {
@@ -2082,7 +2082,7 @@ async function completeMission(id){
   xp += Number(m.xp)||0;
   if(loggedInCandidate){
     if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
-    missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:m.xp};
+    missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:Number(m.xp)||0};
     await dbUpsert('missions',{candidate_id:loggedInCandidate.id, mission_id:m.id, done:true, submitted_file:m.submittedFile||null, xp:m.xp});
   }
   closeMissionModal();
@@ -3305,17 +3305,17 @@ function loginSuccess(candidate){
   const prog = missionProgress[candidate.id]||{};
   xp = 0;
   missions.forEach(m=>{
-    const p = prog[m.id];
+    const p = prog[String(m.id)] || prog[Number(m.id)];
     if(p && p.done){
       m.done = true;
       m.submittedFile = p.submittedFile||null;
-      xp += Number(p.xp)||Number(m.xp)||0;
+      const earnedXp = Number(p.xp)||Number(m.xp)||0;
+      xp += earnedXp;
     } else {
       m.done = false;
       m.submittedFile = null;
     }
   });
-  console.log('[loginSuccess] xp restored:', xp);
   // 既存の進捗からバッジを復元（通知なし）
   checkBadges();
   updateMatchingBadge();

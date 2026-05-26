@@ -3238,6 +3238,7 @@ async function doLogin(){
 
 function loginSuccess(candidate){
   loggedInCandidate = candidate;
+  isAdmin = false;  // 内定者ログイン時は必ず内定者モードに
   document.getElementById('login-overlay').style.display = 'none';
   document.querySelector('.topbar').style.display='flex';
   document.querySelector('.body-wrap').style.display='flex';

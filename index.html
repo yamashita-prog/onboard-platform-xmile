@@ -1131,11 +1131,21 @@ function mergeRemote(local, remote, idKey='id') {
 }
 
 async function dbFetch(table){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
-    headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json'}
-  });
-  if(!res.ok){ console.error('dbFetch error', table, res.status, await res.text()); return []; }
-  return res.json();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000); // 5秒でタイムアウト
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=*`, {
+      headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json'},
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if(!res.ok){ console.warn('dbFetch error', table, res.status); return []; }
+    return res.json();
+  } catch(e) {
+    clearTimeout(timer);
+    console.warn('dbFetch timeout/error', table, e.message);
+    return [];
+  }
 }
 async function dbUpsert(table, data){
   try{
@@ -3045,12 +3055,7 @@ function renderOffers(){
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         ${isNew?`<button class="btn btn-primary btn-sm" onclick="markOfferDone(${o.id})">✅ 対応済みにする</button>`:''}
-        ${cand?.email?`<a href="mailto:${cand.email}?subject=社員交流マッチングについて&body=${encodeURIComponent(o.candidateName+'さん
-
-お世話になっております。
-社員交流マッチングのリクエストを受け付けました。
-
-')}" class="btn btn-ghost btn-sm">✉️ メールを送る</a>`:''}
+        ${cand?.email?`<a href="mailto:${cand.email}?subject=社員交流マッチングについて&body=${encodeURIComponent(o.candidateName+'さん\n\nお世話になっております。\n社員交流マッチングのリクエストを受け付けました。\n\n')}" class="btn btn-ghost btn-sm">✉️ メールを送る</a>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3323,6 +3328,7 @@ function goAdminMode(){
   document.getElementById('nav-settings').style.display='flex';
   document.getElementById('lbl-main').style.display='block';
   document.getElementById('add-news-btn').style.display='inline-flex';
+  const offerNavAdmin=document.getElementById('nav-offers'); if(offerNavAdmin) offerNavAdmin.style.display='flex';
   document.getElementById('sf-name').textContent='田村 さくら';
   document.getElementById('sf-role').textContent='採用担当';
   document.getElementById('sf-av').textContent='田';
@@ -3353,8 +3359,13 @@ async function init(){
   loading.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.95);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text2);gap:10px;font-family:Noto Sans JP,sans-serif';
   loading.innerHTML = '<div style="font-size:20px">🔄</div> 読み込み中...';
   document.body.appendChild(loading);
-  await loadAll();
-  document.body.removeChild(loading);
+  try {
+    await Promise.race([
+      loadAll(),
+      new Promise(r => setTimeout(r, 8000)) // 8秒で強制続行
+    ]);
+  } catch(e) { console.warn('init error', e); }
+  if(document.body.contains(loading)) document.body.removeChild(loading);
   document.querySelector('.topbar').style.display='none';
   document.querySelector('.body-wrap').style.display='none';
 }

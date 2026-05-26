@@ -617,7 +617,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="sidebar-label">内定者向け</div>
     <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
-    <div class="nav-item" id="nav-matching" onclick="nav('matching',this)"><span class="nav-icon">💼</span><span class="nav-label">社員交流マッチング</span></div>
+    <div class="nav-item" id="nav-matching" onclick="nav('matching',this)"><span class="nav-icon">💼</span><span class="nav-label">社員交流マッチング</span><span class="nav-badge red" id="matching-badge" style="display:none">新</span></div>
     <div class="nav-item" onclick="nav('timeline',this)"><span class="nav-icon">🗓</span><span class="nav-label">入社スケジュール</span></div>
   </div>
   <div class="sidebar-footer" style="display:none">
@@ -855,13 +855,16 @@ tbody tr:hover td{background:var(--s2)}
 <div class="page" id="page-offers">
   <div class="page-header">
     <div class="page-eyebrow">Matching Offers</div>
-    <div class="page-title">社員交流オファー管理</div>
-    <div class="page-sub">内定者から届いた社員交流リクエスト一覧</div>
+    <div class="page-title">交流オファー管理</div>
+    <div class="page-sub">内定者から届いた社員交流リクエストを確認・対応しましょう</div>
   </div>
-  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap" id="offer-filter-bar">
-    <button class="btn btn-ghost btn-sm offer-filter-btn active" onclick="filterOffers('all',this)">すべて</button>
-    <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('new',this)">未対応</button>
-    <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('done',this)">対応済み</button>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap" id="offer-filter-bar">
+      <button class="btn btn-ghost btn-sm offer-filter-btn active" onclick="filterOffers('all',this)">すべて <span id="offer-count-all" style="font-family:Outfit,sans-serif;font-weight:700"></span></button>
+      <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('new',this)">🔴 未対応 <span id="offer-count-new" style="font-family:Outfit,sans-serif;font-weight:700;color:var(--red)"></span></button>
+      <button class="btn btn-ghost btn-sm offer-filter-btn" onclick="filterOffers('done',this)">✅ 対応済み <span id="offer-count-done" style="font-family:Outfit,sans-serif;font-weight:700;color:var(--green)"></span></button>
+    </div>
+    <div style="font-size:12px;color:var(--text3)" id="offer-updated-at"></div>
   </div>
   <div id="offers-list"></div>
 </div>
@@ -1262,7 +1265,17 @@ function nav(page,el){
   if(page==='schedule') renderSchedStep();
   if(page==='timeline') renderTimeline();
   if(page==='settings') renderSettings();
-  if(page==='matching'){ renderMatchStep(); }
+  if(page==='matching'){
+    // 自分のオファーを既読にする
+    if(loggedInCandidate){
+      let changed = false;
+      matchingOffers.forEach(o=>{
+        if(o.candidateId===loggedInCandidate.id && !o.viewed){ o.viewed=true; changed=true; }
+      });
+      if(changed){ saveState(); updateMatchingBadge(); }
+    }
+    renderMatchStep();
+  }
   if(page==='offers')  { renderOffers(); }
 }
 
@@ -2920,12 +2933,14 @@ async function submitMatchOffer(){
     status: 'new',
     createdAt: new Date().toLocaleDateString('ja-JP')
   };
+  offer.viewed = false; // 内定者がマッチングページを開くまで未読
   matchingOffers.push(offer);
   saveState();
   // Supabaseへ保存（テーブルがあれば）
   try { await dbUpsert('matching_offers', offer); } catch(e){}
   // バッジ更新
   updateOfferBadge();
+  updateMatchingBadge();
   // 担当者を特定して通知
   const deptLabels = offer.depts.map(d=>deptOpts.find(o=>o.id===d)?.label||d).join('・');
   const assignedRec = recruiters.find(r=>r.id===loggedInCandidate.recruiterId);
@@ -2962,6 +2977,18 @@ function resetMatchState(){
 
 // ── 管理者：オファー一覧 ──
 function renderOffers(){
+  const all = matchingOffers.length;
+  const newCount = matchingOffers.filter(o=>o.status==='new').length;
+  const doneCount = matchingOffers.filter(o=>o.status==='done').length;
+  const countAll = document.getElementById('offer-count-all');
+  const countNew = document.getElementById('offer-count-new');
+  const countDone = document.getElementById('offer-count-done');
+  if(countAll) countAll.textContent = all ? all : '';
+  if(countNew) countNew.textContent = newCount ? newCount : '';
+  if(countDone) countDone.textContent = doneCount ? doneCount : '';
+  const upd = document.getElementById('offer-updated-at');
+  if(upd) upd.textContent = all ? `最終更新：${new Date().toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}` : '';
+
   const filtered = offerFilter==='all' ? matchingOffers
     : matchingOffers.filter(o=>o.status===offerFilter);
   const list = document.getElementById('offers-list');
@@ -2969,31 +2996,62 @@ function renderOffers(){
   if(filtered.length===0){
     list.innerHTML=`<div style="text-align:center;padding:60px;color:var(--text3)">
       <div style="font-size:36px;margin-bottom:8px">📭</div>
-      <div style="font-size:14px">まだオファーがありません</div>
+      <div style="font-size:14px">${offerFilter==='new'?'未対応のオファーはありません':offerFilter==='done'?'対応済みのオファーはありません':'まだオファーがありません'}</div>
     </div>`;
     return;
   }
   list.innerHTML = [...filtered].reverse().map(o=>{
-    const deptLabels = o.depts.map(d=>deptOpts.find(x=>x.id===d)?.label||d);
-    const tags = [
-      ...deptLabels,
-      genderOpts.find(x=>x.id===o.gender)?.label||'',
-      careerOpts.find(x=>x.id===o.career)?.label||'',
-      ageOpts.find(x=>x.id===o.age)?.label||'',
-    ].filter(Boolean);
-    return `<div class="offer-card">
-      <div class="offer-top">
-        <div>
-          <div class="offer-name">👤 ${o.candidateName}</div>
-          <div class="offer-date">${o.createdAt}${(()=>{const c=candidates.find(x=>x.id===o.candidateId);const r=c&&recruiters.find(x=>x.id===c.recruiterId);return r?' · 担当：'+r.av+r.name:' · <span style="color:var(--amber)">担当者未割り当て</span>';})()}</div>
+    const cand = candidates.find(x=>x.id===o.candidateId);
+    const rec = cand && recruiters.find(x=>x.id===cand.recruiterId);
+    const deptLabels = (o.depts||[]).map(d=>deptOpts.find(x=>x.id===d)?.label||d);
+    const gLabel = genderOpts.find(x=>x.id===o.gender)?.label||'';
+    const cLabel = careerOpts.find(x=>x.id===o.career)?.label||'';
+    const aLabel = ageOpts.find(x=>x.id===o.age)?.label||'';
+    const isNew = o.status==='new';
+    return `<div class="offer-card" style="${isNew?'border-color:rgba(220,38,38,.25);':''}">
+      ${isNew?`<div style="display:flex;align-items:center;gap:6px;background:rgba(220,38,38,.06);border-radius:6px;padding:6px 10px;margin-bottom:12px;font-size:11px;font-weight:700;color:var(--red)">🔴 新着オファー · ${o.createdAt}</div>`:''}
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+        <!-- 送信者情報 -->
+        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0;font-family:'Outfit',sans-serif">
+          ${(cand?.emoji || (o.candidateName||'？').charAt(0))}
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="offer-status ${o.status==='new'?'os-new':'os-done'}">${o.status==='new'?'未対応':'対応済み'}</span>
-          ${o.status==='new'?`<button class="btn btn-ghost btn-sm" onclick="markOfferDone(${o.id})">✅ 対応済みにする</button>`:''}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <div style="font-size:15px;font-weight:700">${o.candidateName}</div>
+            <span class="offer-status ${isNew?'os-new':'os-done'}">${isNew?'未対応':'対応済み'}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:10px">
+            ${cand?.univ?`<span>🎓 ${cand.univ}</span>`:''}
+            ${cand?.dept?`<span>🏢 ${cand.dept}</span>`:''}
+            ${cand?.email?`<span>✉️ ${cand.email}</span>`:''}
+          </div>
+        </div>
+        <div style="flex-shrink:0;text-align:right">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${isNew?'':'対応済み · '}${o.createdAt}</div>
+          <div style="font-size:11px;font-weight:600;color:${rec?'var(--accent)':'var(--amber)'}">
+            担当：${rec?rec.av+' '+rec.name:'未割り当て'}
+          </div>
         </div>
       </div>
-      <div class="offer-tags">${tags.map(t=>`<span class="offer-tag">${t}</span>`).join('')}</div>
-      <div class="offer-purpose">"${o.purpose}"</div>
+      <div style="background:var(--s2);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">希望条件</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          ${deptLabels.map(t=>`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(26,127,191,.12);color:var(--accent)">🏢 ${t}</span>`).join('')}
+          ${gLabel?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(168,85,247,.1);color:#a855f7">👤 ${gLabel}</span>`:''}
+          ${cLabel?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(245,158,11,.1);color:var(--amber)">💼 ${cLabel}</span>`:''}
+          ${aLabel?`<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(5,150,105,.1);color:var(--green)">📅 ${aLabel}</span>`:''}
+        </div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.8;border-top:1px solid var(--border);padding-top:10px">"${o.purpose}"</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        ${isNew?`<button class="btn btn-primary btn-sm" onclick="markOfferDone(${o.id})">✅ 対応済みにする</button>`:''}
+        ${cand?.email?`<a href="mailto:${cand.email}?subject=社員交流マッチングについて&body=${encodeURIComponent(o.candidateName+'さん
+
+お世話になっております。
+社員交流マッチングのリクエストを受け付けました。
+
+')}" class="btn btn-ghost btn-sm">✉️ メールを送る</a>`:''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -3014,6 +3072,23 @@ function updateOfferBadge(){
   const badge = document.getElementById('offer-badge');
   const newCount = matchingOffers.filter(o=>o.status==='new').length;
   if(badge){ badge.style.display = newCount>0?'':'none'; badge.textContent=newCount>0?newCount+'':''; }
+  // 内定者向け：未読オファー（自分宛）をマッチングバッジに反映
+  updateMatchingBadge();
+}
+
+function updateMatchingBadge(){
+  const badge = document.getElementById('matching-badge');
+  if(!badge) return;
+  // 自分が送ったオファーのうち未読（viewed:falseのもの）があればバッジ表示
+  const unread = matchingOffers.filter(o =>
+    loggedInCandidate && o.candidateId === loggedInCandidate.id && !o.viewed
+  ).length;
+  if(unread > 0){
+    badge.style.display = '';
+    badge.textContent = unread;
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ═══════════ NOTIFICATIONS ═══════════
@@ -3156,6 +3231,7 @@ function loginSuccess(candidate){
   });
   // 既存の進捗からバッジを復元（通知なし）
   checkBadges();
+  updateMatchingBadge();
   nav('missions', document.getElementById('nav-missions'));
   // 絵文字未設定なら設定画面へ（localStorageも確認）
   const cachedEmoji = localStorage.getItem('emoji_'+candidate.id);

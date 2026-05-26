@@ -569,12 +569,13 @@ tbody tr:hover td{background:var(--s2)}
 <div class="login-overlay" id="emoji-overlay" style="display:none;z-index:510">
   <div class="login-box">
     <div class="login-logo">Onboard.</div>
-    <div class="login-sub" style="margin-bottom:8px">あなたのアバター絵文字を選んでください🎉</div>
-    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:20px">ランキングでこの絵文字で表示されます</div>
+    <div class="login-sub" style="margin-bottom:8px">アバター絵文字を選んでください🎉</div>
+    <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:20px">ランキングでは名前の代わりにこの絵文字で表示されます。スキップしても自動で設定されます。</div>
     <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px"></div>
     <div id="emoji-selected-preview" style="text-align:center;font-size:36px;margin-bottom:12px;min-height:44px"></div>
     <div id="emoji-err" style="font-size:12px;color:var(--red);text-align:center;margin-bottom:8px;display:none"></div>
     <button class="login-btn" id="emoji-save-btn" onclick="saveEmoji()" disabled style="opacity:.4">この絵文字で決定する</button>
+    <button class="login-btn" onclick="skipEmojiSetup()" style="margin-top:8px;background:var(--s2);color:var(--text2);border:1px solid var(--border)">自動設定のままにする</button>
   </div>
 </div>
 <div class="topbar">
@@ -1318,14 +1319,20 @@ function renderDashboard(){
     </div>
   </div>`).join('');
   const ds=document.getElementById('dash-sched');
-  ds.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
+  ds.innerHTML=sortedSchedules(schedules).slice(0,3).map(s=>schedCard(s)).join('');
 }
 
-function schedCard(s){return`<div class="sched-item">
-  <div class="sched-date"><div class="sched-m">${s.month}</div><div class="sched-d">${s.day}</div></div>
+const MONTH_NUM={'JAN':'1','FEB':'2','MAR':'3','APR':'4','MAY':'5','JUN':'6','JUL':'7','AUG':'8','SEP':'9','OCT':'10','NOV':'11','DEC':'12'};
+function schedSortKey(s){ const m=parseInt(MONTH_NUM[s.month]||s.month)||0; const d=parseInt(s.day)||0; return m*100+d; }
+function sortedSchedules(list){ return [...list].sort((a,b)=>schedSortKey(a)-schedSortKey(b)); }
+function schedCard(s){
+  const mNum = MONTH_NUM[s.month] || s.month;
+  return `<div class="sched-item">
+  <div class="sched-date"><div class="sched-m">${mNum}月</div><div class="sched-d">${s.day}</div></div>
   <div class="sched-info"><div class="sched-title">${s.title}</div><div class="sched-detail">${s.detail}</div></div>
   <span class="sched-tag t-${s.tag}">${s.tagLabel}</span>
-</div>`}
+</div>`;
+}
 
 // ═══════════ CANDIDATES ═══════════
 function renderCandidates(){
@@ -1397,11 +1404,25 @@ function closeCandModal(e){if(!e||e.target===document.getElementById('cand-modal
 
 function closeAddCandModal(e){if(!e||e.target===document.getElementById('add-cand-modal'))document.getElementById('add-cand-modal').classList.remove('open')}
 
+function assignDefaultEmoji(){
+  // 使用済みの絵文字を収集
+  const usedEmojis = new Set(candidates.map(c=>c.emoji).filter(Boolean));
+  // EMOJI_CHOICESから未使用のものを選ぶ
+  const available = EMOJI_CHOICES.filter(e=>!usedEmojis.has(e));
+  if(available.length > 0){
+    // ランダムに1つ選ぶ
+    return available[Math.floor(Math.random()*available.length)];
+  }
+  // 全部使用済みならランダムに返す（稀なケース）
+  return EMOJI_CHOICES[Math.floor(Math.random()*EMOJI_CHOICES.length)];
+}
+
 async function addCandidate(){
   const name=document.getElementById('ac-name').value.trim();
   if(!name) return;
   const recruiterId = document.getElementById('ac-recruiter').value || null;
-  candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',recruiterId,progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
+  const defaultEmoji = assignDefaultEmoji();
+  candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',recruiterId,emoji:defaultEmoji,progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
   ['ac-name','ac-univ','ac-dept','ac-email'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ac-recruiter').value='';
   closeAddCandModal();
@@ -1638,7 +1659,7 @@ async function renderNews(){
   }
 
   const ns=document.getElementById('news-sched');
-  ns.innerHTML=schedules.slice(0,3).map(s=>schedCard(s)).join('');
+  ns.innerHTML=sortedSchedules(schedules).slice(0,3).map(s=>schedCard(s)).join('');
   const fl=document.getElementById('faq-list');
   fl.innerHTML=faqs.map((f,i)=>`<div class="faq-item" id="faq-${i}">
     <div class="faq-q" onclick="toggleFaq(${i})"><span class="faq-qmark">Q</span><span style="flex:1">${f.q}</span><span class="faq-chevron">▼</span></div>
@@ -1877,16 +1898,30 @@ function renderMissions(){
     return {name:c.name, emoji, xp:totalXp, lv:lv.lv, me:isMe};
   }).sort((a,b)=>b.xp-a.xp)
   // 内定者モードでは未ログイン(絵文字なし&XP=0)の人を非表示（自分は除く）
-  .filter(r => isAdmin || r.me || r.emoji || r.xp > 0);
+  .filter(r => isAdmin || r.emoji || r.xp > 0 || r.me);
 
   document.getElementById('rank-list').innerHTML = rankData.length === 0
     ? `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだ参加者がいません</div>`
-    : rankData.map((r,i)=>`<div class="rank-item ${r.me?'me':''}">
+    : rankData.map((r,i)=>{
+      const dispEmoji = r.emoji || '？';
+      // 管理者：名前表示。内定者：絵文字のみ（自分だけ「あなた」）
+      const avatarHtml = isAdmin ? r.name.charAt(0) : dispEmoji;
+      const nameHtml = isAdmin
+        ? r.name
+        : (r.me ? `<span style="font-weight:700">${dispEmoji} あなた</span>` : dispEmoji);
+      const sublabelHtml = isAdmin
+        ? `Lv.${r.lv}`
+        : (r.me ? `Lv.${r.lv}` : `Lv.${r.lv}`);
+      return `<div class="rank-item ${r.me?'me':''}">
     <div class="rank-num ${rc[i]||''}">${i+1}</div>
-    <div class="rank-av">${isAdmin ? r.name.charAt(0) : (r.me ? (r.emoji||r.name.charAt(0)) : (r.emoji||'？'))}</div>
-    <div class="rank-info"><div class="rank-name">${isAdmin ? r.name : (r.me ? r.name+' (あなた)' : (r.emoji||'？'))}</div><div class="rank-lv">Lv.${r.lv}</div></div>
+    <div class="rank-av" style="font-size:${isAdmin?'12px':'18px'}">${avatarHtml}</div>
+    <div class="rank-info">
+      <div class="rank-name">${nameHtml}</div>
+      <div class="rank-lv">${sublabelHtml}</div>
+    </div>
     <div class="rank-xp">${r.xp} XP</div>
-  </div>`).join('');
+  </div>`;
+    }).join('');
 }
 
 function openMission(id){
@@ -2316,7 +2351,7 @@ function closeAssignRecruiter(e){
 
 // ═══════════ TIMELINE ═══════════
 function renderTimeline(){
-  document.getElementById('timeline-list').innerHTML=schedules.map(s=>schedCard(s)).join('');
+  document.getElementById('timeline-list').innerHTML=sortedSchedules(schedules).map(s=>schedCard(s)).join('');
 }
 
 // ═══════════ SETTINGS ═══════════
@@ -3241,7 +3276,21 @@ function loginSuccess(candidate){
   // 絵文字未設定なら設定画面へ（localStorageも確認）
   const cachedEmoji = localStorage.getItem('emoji_'+candidate.id);
   if(cachedEmoji && !candidate.emoji) candidate.emoji = cachedEmoji;
-  if(!candidate.emoji) setTimeout(showEmojiSetup, 300);
+  // 絵文字未設定なら自動でデフォルト絵文字を付与してから選択画面を出す
+  if(!candidate.emoji){
+    const auto = assignDefaultEmoji();
+    candidate.emoji = auto;
+    const c = candidates.find(x=>x.id===candidate.id);
+    if(c) c.emoji = auto;
+    localStorage.setItem('emoji_'+candidate.id, auto);
+    // Supabaseにも保存（非同期）
+    fetch(`${SUPABASE_URL}/rest/v1/candidates?id=eq.${candidate.id}`, {
+      method:'PATCH',
+      headers:{'apikey':SUPABASE_KEY,'Authorization':`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({emoji:auto})
+    }).catch(()=>{});
+    setTimeout(showEmojiSetup, 300); // 初回ログイン時は選択画面を表示
+  }
 }
 
 // ═══════════ EMOJI SETUP ═══════════
@@ -3262,6 +3311,12 @@ function showEmojiSetup(){
   const saveBtn = document.getElementById('emoji-save-btn');
   saveBtn.disabled = true; saveBtn.style.opacity = '.4';
   document.getElementById('emoji-overlay').style.display = 'flex';
+}
+
+function skipEmojiSetup(){
+  // 自動割り当て済みの絵文字のまま閉じる
+  document.getElementById('emoji-overlay').style.display = 'none';
+  showToast('🎉 絵文字が自動設定されました！');
 }
 
 function selectEmoji(e){

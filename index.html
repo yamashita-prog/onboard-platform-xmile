@@ -1889,16 +1889,18 @@ function renderMissions(){
   </div>`).join('');
 
   const rc=['g','s','b'];
-  const rankData = candidates.map(c=>{
+  // 絵文字未設定者に対してindex順の仮絵文字を割り当て（名前は出さない）
+  const FALLBACK_EMOJIS = ['🐶','🐱','🐭','🐹','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦋','🌸','🌟','⚡','🔥','🌈','🎯','🚀','💎','🎸','🍀','🌙','☀️','❄️','🎨','🎮','🏆','🦄','🍣','🍕','🎃','🌊','🦅','🐬','🌺','🎪'];
+  const rankData = candidates.map((c, idx)=>{
     const prog = missionProgress[c.id]||{};
     const totalXp = Object.values(prog).reduce((s,v)=>s+(v.done?v.xp:0),0);
     const lv = getLevel(totalXp);
     const isMe = loggedInCandidate && c.id===loggedInCandidate.id;
-    const emoji = c.emoji || localStorage.getItem('emoji_'+c.id) || null;
+    // 絵文字：設定済み > localStorage > 仮絵文字（indexベースで固定）
+    const emoji = c.emoji || localStorage.getItem('emoji_'+c.id) || FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length];
     return {name:c.name, emoji, xp:totalXp, lv:lv.lv, me:isMe};
-  }).sort((a,b)=>b.xp-a.xp)
-  // 内定者モードでは未ログイン(絵文字なし&XP=0)の人を非表示（自分は除く）
-  .filter(r => isAdmin || r.emoji || r.xp > 0 || r.me);
+  }).sort((a,b)=>b.xp-a.xp);
+  // 内定者モードでも全員表示（フィルターなし）
 
   document.getElementById('rank-list').innerHTML = rankData.length === 0
     ? `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">まだ参加者がいません</div>`

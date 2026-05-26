@@ -1865,12 +1865,22 @@ async function addNews(){
 }
 
 // ═══════════ MISSIONS ═══════════
-function getLevel(x){return LEVELS.slice().reverse().find(l=>x>=(LEVELS.find(ll=>ll.lv===l.lv-1)||{max:0}).max)||LEVELS[0]}
+function getLevel(x){
+  // xが各レベルのmax未満の最初のレベルを返す
+  for(let i=0;i<LEVELS.length;i++){
+    if(x < LEVELS[i].max) return LEVELS[i];
+  }
+  return LEVELS[LEVELS.length-1]; // 最大レベル
+}
+function getLevelPrevMax(lv){
+  if(lv.lv <= 1) return 0;
+  return LEVELS[lv.lv-2].max;
+}
 
 function renderMissions(){
   const lv=getLevel(xp);
   // prevMax: 現レベルの開始XP（Lv1は0）
-  const prevMax = lv.lv > 1 ? LEVELS[lv.lv-2].max : 0;
+  const prevMax = getLevelPrevMax(lv);
   // このレベル内での進捗
   const lvRange = lv.max - prevMax;
   const lvProgress = xp - prevMax;
@@ -2069,7 +2079,7 @@ async function completeMission(id){
   m.done=true;
   m.submittedFile=m._pendingFile||null;
   m._completedDate=new Date().toDateString();
-  xp+=m.xp;
+  xp += Number(m.xp)||0;
   if(loggedInCandidate){
     if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
     missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:m.xp};
@@ -3296,9 +3306,16 @@ function loginSuccess(candidate){
   xp = 0;
   missions.forEach(m=>{
     const p = prog[m.id];
-    if(p && p.done){ m.done = true; m.submittedFile = p.submittedFile||null; xp += p.xp||m.xp; }
-    else { m.done = false; m.submittedFile = null; }
+    if(p && p.done){
+      m.done = true;
+      m.submittedFile = p.submittedFile||null;
+      xp += Number(p.xp)||Number(m.xp)||0;
+    } else {
+      m.done = false;
+      m.submittedFile = null;
+    }
   });
+  console.log('[loginSuccess] xp restored:', xp);
   // 既存の進捗からバッジを復元（通知なし）
   checkBadges();
   updateMatchingBadge();

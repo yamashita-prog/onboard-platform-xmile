@@ -152,11 +152,13 @@ tbody tr:hover td{background:var(--s2)}
 .xp-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'Outfit',sans-serif}
 
 /* ── XP BAR ── */
-.xp-bar-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,80,140,.05)}
-.xp-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.xp-lv{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--amber)}
-.xp-track{height:8px;background:var(--s3);border-radius:99px;overflow:hidden;margin-bottom:6px}.xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
-.xp-detail{display:flex;justify-content:space-between;font-size:11px;color:var(--text2)}
+.xp-bar-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.07)}
+.xp-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.xp-lv{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--amber)}
+.xp-track{height:18px;background:var(--s3);border-radius:99px;overflow:hidden;margin-bottom:8px;position:relative;box-shadow:inset 0 2px 4px rgba(0,0,0,.08)}
+.xp-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .8s cubic-bezier(.34,1.56,.64,1);position:relative}
+.xp-fill::after{content:'';position:absolute;top:3px;left:6px;right:6px;height:4px;background:rgba(255,255,255,.3);border-radius:99px}
+.xp-detail{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);font-weight:500}
 
 /* ── SCHEDULE ── */
 .sched-list{display:flex;flex-direction:column;gap:8px}
@@ -726,14 +728,27 @@ tbody tr:hover td{background:var(--s2)}
   </div>
   <div class="xp-bar-wrap">
     <div class="xp-bar-top">
-      <div><div class="xp-lv" id="xp-lv">Lv.3 ライジング</div><div style="font-size:11px;color:var(--text2);margin-top:2px" id="xp-name-label"></div></div>
-      <div style="display:flex;gap:10px">
-        <div style="text-align:center"><div style="font-size:18px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--green)" id="stat-done">3</div><div style="font-size:10px;color:var(--text2)">完了</div></div>
-        <div style="text-align:center"><div style="font-size:18px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--amber)" id="stat-xp">350</div><div style="font-size:10px;color:var(--text2)">XP</div></div>
+      <div>
+        <div class="xp-lv" id="xp-lv">Lv.3 ライジング</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px" id="xp-name-label"></div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center">
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--green);line-height:1" id="stat-done">0</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">完了</div>
+        </div>
+        <div style="width:1px;height:28px;background:var(--border)"></div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--amber);line-height:1" id="stat-xp">0</div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">XP</div>
+        </div>
       </div>
     </div>
-    <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:58%"></div></div>
-    <div class="xp-detail"><span id="xp-cur">350 / 600 XP</span><span id="xp-next-lbl">次のLvまで 250 XP</span></div>
+    <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+    <div class="xp-detail">
+      <span id="xp-cur" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+      <span id="xp-next-lbl" style="color:var(--accent)"></span>
+    </div>
   </div>
   <div class="two-col" style="align-items:start">
     <div class="card">
@@ -1854,16 +1869,21 @@ function getLevel(x){return LEVELS.slice().reverse().find(l=>x>=(LEVELS.find(ll=
 
 function renderMissions(){
   const lv=getLevel(xp);
-  const prevMax=lv.lv>1?(LEVELS[lv.lv-2].max):0;
-  const pct=Math.min(100,Math.round((xp-prevMax)/(lv.max-prevMax)*100));
+  // prevMax: 現レベルの開始XP（Lv1は0）
+  const prevMax = lv.lv > 1 ? LEVELS[lv.lv-2].max : 0;
+  // このレベル内での進捗
+  const lvRange = lv.max - prevMax;
+  const lvProgress = xp - prevMax;
+  const pct = Math.min(100, Math.round(lvProgress / lvRange * 100));
   document.getElementById('xp-lv').textContent=`Lv.${lv.lv} ${lv.name}`;
   document.getElementById('xp-name-label').textContent=loggedInCandidate?loggedInCandidate.name:'';
   document.getElementById('xp-fill').style.width=pct+'%';
   document.getElementById('stat-done').textContent=missions.filter(m=>m.done).length;
   document.getElementById('stat-xp').textContent=xp;
-  document.getElementById('xp-cur').textContent=`${xp} / ${lv.max} XP`;
+  // バーの下の数字もレベル内進捗で表示
+  document.getElementById('xp-cur').textContent=`${lvProgress} / ${lvRange} XP（このLv内）`;
   const next=LEVELS.find(l=>l.lv===lv.lv+1);
-  document.getElementById('xp-next-lbl').textContent=next?`次のLvまで ${lv.max-xp} XP`:'最高レベル！';
+  document.getElementById('xp-next-lbl').textContent=next?`次のLvまで ${lv.max-xp} XP`:'👑 最高レベル！';
 
   const submitLabel={doc:'📄 ファイル提出',image:'📸 スクショ提出',check:'✋ 参加報告'};
   document.getElementById('mission-list').innerHTML=missions.map(m=>`<div class="mission-item ${m.done?'done':m.locked?'locked':''}" onclick="${m.locked?'':'openMission('+m.id+')'}">

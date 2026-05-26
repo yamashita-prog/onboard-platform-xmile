@@ -1081,17 +1081,12 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const LS_KEY = 'onboard_v5'; // バージョンアップでキャッシュリセット
 
 function saveState() {
+  // Supabaseが正なので、ローカルにはユーザー操作データ（いいね・進捗）と画像のみ保存
   try {
     const imgMap = {};
     articles.forEach(a => { if(a.image) imgMap[String(a.id)] = a.image; });
     const payload = {
-      candidates,
-      articles: articles.map(({image, _pendingFile, ...rest}) => rest),
       articleImages: imgMap,
-      missions: missions.map(({_pendingFile, ...rest}) => rest),
-      schedTypes: [...schedTypes],
-      schedules:  [...schedules],
-      recruiters,
       missionProgress,
       articleLikes,
       matchingOffers,
@@ -1099,40 +1094,18 @@ function saveState() {
     };
     localStorage.setItem(LS_KEY, JSON.stringify(payload));
   } catch(e) {
-    try {
-      const payload = {
-        candidates,
-        articles: articles.map(a => ({...a, image: null, _pendingFile: undefined})),
-        articleImages: {},
-        missions: missions.map(({_pendingFile, ...rest}) => rest),
-        schedTypes: [...schedTypes], schedules: [...schedules],
-        recruiters, missionProgress, articleLikes, ts: Date.now()
-      };
-      localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    } catch(e2) { console.warn('saveState failed:', e2); }
+    console.warn('saveState failed:', e);
   }
 }
 
 function restoreState() {
+  // ユーザー操作データ（いいね・進捗・オファー）のみ復元
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    if (s.candidates?.length)  candidates = s.candidates;
-    if (s.articles?.length) {
-      articles = s.articles.map(a => ({...a}));
-      articles.forEach(a => {
-        const img = s.articleImages?.[String(a.id)]
-                 || localStorage.getItem('article_img_' + a.id);
-        if (img) a.image = img;
-      });
-    }
-    if (s.missions?.length)    missions = s.missions;
-    if (s.schedTypes?.length)  { schedTypes.length = 0; s.schedTypes.forEach(x => schedTypes.push(x)); }
-    if (s.schedules?.length)   { schedules.length  = 0; s.schedules.forEach(x => schedules.push(x)); }
-    if (s.recruiters?.length)  recruiters = s.recruiters;
-    if (s.missionProgress)     missionProgress = s.missionProgress;
-    if (s.articleLikes)        Object.assign(articleLikes, s.articleLikes);
+    if (s.missionProgress)        missionProgress = s.missionProgress;
+    if (s.articleLikes)           Object.assign(articleLikes, s.articleLikes);
     if (s.matchingOffers?.length) matchingOffers = s.matchingOffers;
     return true;
   } catch(e) { console.warn('restoreState error:', e); return false; }
@@ -1184,10 +1157,10 @@ async function dbDelete(table, id){
 let missionProgress = {};
 
 async function loadAll(){
-  // ① まずlocalStorageから即時復元
+  // ① まずlocalStorageから即時復元（表示の初期化用）
   restoreState();
 
-  // ② Supabaseから取得（localに無いものだけ追加）
+  // ② Supabaseから取得（Supabaseが正、ローカルはキャッシュのみ）
   try{
     const [r, c, a, mp, mt, st, sc] = await Promise.all([
       dbFetch('recruiters').catch(()=>[]),
@@ -1199,45 +1172,83 @@ async function loadAll(){
       dbFetch('schedules').catch(()=>[]),
     ]);
 
-    if(r?.length) recruiters = mergeRemote(recruiters, r);
-    if(c?.length) candidates = mergeRemote(candidates, c);
+    // Supabaseのデータで上書き（取得できた場合は必ず最新を使う）
+    if(r?.length) recruiters = r;
+    if(c?.length) candidates = c;
+
     if(a?.length) {
-      const sbArticles = a.map(x=>({...x, isNew: x.is_new}));
-      articles = mergeRemote(articles, sbArticles);
-      // 画像をlocalStorageから復元
-      const saved = JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+      // 記事はSupabaseを正として使い、画像だけlocalStorageから補完
+      articles = a.map(x=>({...x, isNew: x.is_new}));
       articles.forEach(art => {
         if(!art.image){
-          const img = saved.articleImages?.[String(art.id)]
-                   || localStorage.getItem('article_img_'+art.id);
+          const img = localStorage.getItem('article_img_'+art.id);
           if(img) art.image = img;
         }
       });
     }
+
     if(mp?.length){
       missionProgress = {};
       mp.forEach(row => {
         if(!missionProgress[row.candidate_id]) missionProgress[row.candidate_id] = {};
-        missionProgress[row.candidate_id][row.mission_id] = {done: row.done, submittedFile: row.submitted_file, xp: row.xp};
+        missionProgress[row.candidate_id][row.mission_id] = {
+          done: row.done,
+          submittedFile: row.submitted_file,
+          xp: Number(row.xp)||0
+        };
       });
     }
+
     if(mt?.length){
-      missions = mt.map(m=>({id:m.id,icon:m.icon||'📋',title:m.title,desc:m.description||'',cat:m.cat||'',xp:m.xp||0,done:false,stamp:'✅',locked:false,submitType:m.submit_type||'check',submittedFile:null}));
+      missions = mt.map(m=>({
+        id: m.id,
+        icon: m.icon||'📋',
+        title: m.title,
+        desc: m.description||'',
+        cat: m.cat||'',
+        xp: Number(m.xp)||0,
+        done: false,
+        stamp: '✅',
+        locked: false,
+        submitType: m.submit_type||'check',
+        submittedFile: null
+      }));
     }
+
     if(st?.length){
       schedTypes.length = 0;
-      st.forEach(s=>schedTypes.push({id:String(s.id),icon:s.icon||'📅',name:s.name,desc:s.description||'',dur:s.duration||'30分'}));
+      st.forEach(s=>schedTypes.push({
+        id: String(s.id),
+        icon: s.icon||'📅',
+        name: s.name,
+        desc: s.description||'',
+        dur: s.duration||'30分'
+      }));
     }
+
     if(sc?.length){
       schedules.length = 0;
-      sc.forEach(s=>schedules.push({id:s.id,month:s.month,day:s.day,title:s.title,detail:s.detail||'',tag:s.tag||'req',tagLabel:s.tag_label||''}));
+      sc.forEach(s=>schedules.push({
+        id: s.id,
+        month: s.month,
+        day: s.day,
+        title: s.title,
+        detail: s.detail||'',
+        tag: s.tag||'req',
+        tagLabel: s.tag_label||''
+      }));
     }
+
   } catch(e){ console.warn('loadAll error', e); }
 
   // matching offers
-  try{ const mo=await dbFetch('matching_offers').catch(()=>[]); if(mo?.length) matchingOffers=mergeRemote(matchingOffers,mo); } catch(e){}
+  try{
+    const mo = await dbFetch('matching_offers').catch(()=>[]);
+    if(mo?.length) matchingOffers = mo;
+  } catch(e){}
+
   updateOfferBadge();
-  // ③ マージ後を保存
+  // ③ 最新状態を保存
   saveState();
 }
 

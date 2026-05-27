@@ -1170,14 +1170,41 @@ async function dbFetch(table){
   }
 }
 async function dbUpsert(table, data){
+  // idがあればPATCH(更新)、なければPOST(新規)
+  const isArray = Array.isArray(data);
+  const items = isArray ? data : [data];
   try{
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'resolution=merge-duplicates'},
-      body: JSON.stringify(Array.isArray(data) ? data : [data])
-    });
-    if(!res.ok){ const t=await res.text(); console.warn('dbUpsert error',table,res.status,t); }
-    return res;
+    const results = await Promise.all(items.map(async item => {
+      if(item.id !== undefined && item.id !== null){
+        // 既存レコードをPATCHで更新
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(item.id)}`, {
+          method: 'PATCH',
+          headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
+          body: JSON.stringify(item)
+        });
+        if(!res.ok){
+          // PATCHが404等の場合はPOSTで新規作成
+          const res2 = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+            method: 'POST',
+            headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
+            body: JSON.stringify(item)
+          });
+          if(!res2.ok){ const t=await res2.text(); console.warn('dbUpsert POST error',table,res2.status,t); }
+          return res2;
+        }
+        return res;
+      } else {
+        // idなし → 新規POST
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
+          body: JSON.stringify(item)
+        });
+        if(!res.ok){ const t=await res.text(); console.warn('dbUpsert POST error',table,res.status,t); }
+        return res;
+      }
+    }));
+    return results[0];
   } catch(e){ console.warn('dbUpsert network error',table,e); }
 }
 async function dbDelete(table, id){
@@ -1204,16 +1231,23 @@ async function loadAll(){
       dbFetch('schedules').catch(()=>[]),
     ]);
 
-    // Supabaseのデータで上書き（取得できた場合は必ず最新を使う）
-    if(r?.length) recruiters = r;
-    if(c?.length) candidates = c;
+    // Supabaseのデータで上書き（常にSupabaseを正とする）
+    if(Array.isArray(r) && r.length > 0) recruiters = r;
+    if(Array.isArray(c)){
+      if(c.length > 0){
+        // docsフィールドが文字列で来る場合はパース
+        candidates = c.map(cand => ({
+          ...cand,
+          docs: typeof cand.docs === 'string' ? JSON.parse(cand.docs) : (cand.docs || [])
+        }));
+      }
+    }
 
-    if(a?.length) {
-      // 記事はSupabaseのデータをそのまま使用
+    if(Array.isArray(a) && a.length > 0) {
       articles = a.map(x=>({...x, isNew: x.is_new}));
     }
 
-    if(mp?.length){
+    if(Array.isArray(mp) && mp.length > 0){
       missionProgress = {};
       mp.forEach(row => {
         if(!missionProgress[row.candidate_id]) missionProgress[row.candidate_id] = {};
@@ -1225,6 +1259,7 @@ async function loadAll(){
       });
     }
 
+    console.log('[loadAll] mission_templates from Supabase:', mt?.length, mt);
     if(Array.isArray(mt)){
       // Supabaseが正：取得できたら常に上書き（空でもデフォルトを使わない）
       if(mt.length > 0){
@@ -1273,6 +1308,7 @@ async function loadAll(){
       }
     }
 
+    console.log('[loadAll] schedules from Supabase:', sc?.length, sc);
     if(Array.isArray(sc)){
       if(sc.length > 0){
         schedules.length = 0;
@@ -1493,6 +1529,7 @@ async function toggleDoc(cid,idx){
   c.status=c.progress===100?'done':c.progress===0?'risk':'pend';
   await dbUpsert('candidates', {...c, docs: c.docs});
   openCand(cid);
+  renderCandidates();
   renderDashboard();
 }
 
@@ -1523,7 +1560,18 @@ async function addCandidate(){
   document.getElementById('ac-recruiter').value='';
   closeAddCandModal();
   await dbUpsert('candidates', candidates[candidates.length-1]);
+  // Supabaseから再取得して同期
+  try {
+    const c2 = await dbFetch('candidates');
+    if(Array.isArray(c2) && c2.length > 0){
+      candidates = c2.map(cand => ({
+        ...cand,
+        docs: typeof cand.docs === 'string' ? JSON.parse(cand.docs) : (cand.docs || [])
+      }));
+    }
+  } catch(e){}
   renderCandidates();
+  renderDashboard();
   showToast('✅ 内定者を追加しました');
 }
 
@@ -3195,7 +3243,9 @@ async function saveSetting(type, id, btnEl){
       record.id = Date.now();
       missions.push({id:record.id, icon:record.icon, title:record.title, desc:record.description, cat:record.cat, xp:record.xp, done:false, stamp:'✅', locked:false, submitType:record.submit_type, submittedFile:null});
     }
+    console.log('[saveSetting] saving mission_template:', record);
     const saved = await dbUpsert('mission_templates', record);
+    console.log('[saveSetting] save result:', saved?.status);
     // 保存後に再取得して missions を最新化
     try {
       const mt2 = await dbFetch('mission_templates');
@@ -3244,7 +3294,9 @@ async function saveSetting(type, id, btnEl){
       record.id = Date.now();
       schedules.push({id:record.id, month:record.month, day:record.day, title:record.title, detail:record.detail, tag:record.tag, tagLabel:record.tag_label});
     }
+    console.log('[saveSetting] saving schedule:', record);
     await dbUpsert('schedules', record);
+    console.log('[saveSetting] schedule saved');
     try {
       const sc2 = await dbFetch('schedules');
       if(Array.isArray(sc2) && sc2.length > 0){

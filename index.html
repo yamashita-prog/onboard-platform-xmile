@@ -2132,7 +2132,7 @@ function renderAdminRoadmap(){
   ];
   const total = allSquares.length;
 
-  // 各内定者の現在地（フルネーム付き）
+  // 各内定者の現在地
   const playerPositions = {};
   candidates.forEach((c, idx) => {
     const prog = missionProgress[c.id] || {};
@@ -2146,108 +2146,110 @@ function renderAdminRoadmap(){
     playerPositions[pos].push({emoji, name: c.name, doneCount});
   });
 
-  // レイアウト定数（マス高さを人数に応じて動的計算）
+  // カードをHTMLで作る（SVGを使わずflexboxグリッド）
   const COLS = 3;
-  const SQ_W = 180;
-  const HEADER_H = 82;
-  const PIECE_GAP_Y = 22;
-  const FOOTER_H = 20;
-  const PADDING_V = 14;
-  function sqH(idx2) {
-    const count = (playerPositions[idx2] || []).length;
-    const bodyH = Math.max(count, 1) * PIECE_GAP_Y + 6;
-    return HEADER_H + bodyH + FOOTER_H + PADDING_V;
-  }
-  const MARGIN_X = 110;
-  const MARGIN_Y = 60;
-  const colW = 260;
   const numRows = Math.ceil(total / COLS);
-  function rowMaxH(row) {
-    let max = 0;
-    for(let c = 0; c < COLS; c++){
-      const i2 = row * COLS + c;
-      if(i2 < total) max = Math.max(max, sqH(i2));
+
+  // 蛇行順にカード生成
+  let cardsHtml = '';
+  // グリッドの各行を構築（蛇行）
+  for(let row = 0; row < numRows; row++){
+    const rowItems = [];
+    for(let col = 0; col < COLS; col++){
+      const i = row * COLS + col;
+      if(i < total) rowItems.push(i);
+      else rowItems.push(null);
     }
-    return max + 60;
-  }
-  const rowTopY = [MARGIN_Y];
-  for(let r = 1; r < numRows; r++) rowTopY.push(rowTopY[r-1] + rowMaxH(r-1));
-  function coordOf(i2) {
-    const row = Math.floor(i2 / COLS);
-    const posInRow = i2 % COLS;
-    const col = row % 2 === 0 ? posInRow : (COLS - 1 - posInRow);
-    const h = sqH(i2);
-    return {x: MARGIN_X + col * colW, y: rowTopY[row] + h/2};
-  }
-  const W = MARGIN_X * 2 + colW * (COLS - 1);
-  const SVG_H = rowTopY[numRows-1] + rowMaxH(numRows-1) + MARGIN_Y;
+    // 奇数行は右から左
+    if(row % 2 === 1) rowItems.reverse();
 
-  // 蛇行座標（coordOf関数を使用）
-  const coords = [];
-  for(let i = 0; i < total; i++) coords.push(coordOf(i));
+    let rowHtml = rowItems.map(i => {
+      if(i === null) return `<div style="flex:1;min-width:160px;max-width:220px"></div>`;
+      const sq = allSquares[i];
+      const pieces = playerPositions[i] || [];
 
-  // パス生成
-  function buildPath(upTo){
-    let d = '';
-    for(let i = 0; i < upTo; i++){
-      const a = coords[i], b = coords[i+1];
-      const rowA = Math.floor(i / COLS), rowB = Math.floor((i+1) / COLS);
-      if(i === 0) d += `M ${a.x} ${a.y}`;
-      if(rowA === rowB){
-        d += ` L ${b.x} ${b.y}`;
-      } else {
-        d += ` C ${a.x} ${(a.y+b.y)/2}, ${b.x} ${(a.y+b.y)/2}, ${b.x} ${b.y}`;
-      }
-    }
-    return d;
-  }
-  const pathD = buildPath(total - 1);
+      let bg = '#f0f7fc', border = '#b0d4e8';
+      if(sq.isStart){ bg='#fffbeb'; border='#d97706'; }
+      if(sq.isGoal){ bg='#fdf2f8'; border='#db2777'; }
+      if(pieces.length > 0 && !sq.isStart && !sq.isGoal){ bg='#f0fdf4'; border='#059669'; }
 
-  // マス生成（高さ動的）
-  let squaresHtml = '';
-  allSquares.forEach((sq, i) => {
-    const {x, y} = coords[i];
-    const SQ_H = sqH(i);   // 高さ：人数に応じた動的値
-    const pieces = playerPositions[i] || [];
-    const clickFn = (!sq.isStart && !sq.isGoal) ? `openMission(${sq.id})` : '';
+      const clickAttr = (!sq.isStart && !sq.isGoal) ? `onclick="openMission(${sq.id})" style="cursor:pointer"` : '';
+      const stepLabel = (i > 0 && i < total-1) ? `<div style="font-size:9px;font-weight:700;color:${border};opacity:.8;margin-bottom:2px;letter-spacing:.08em">STEP ${i}</div>` : '';
+      const xpLabel = sq.xp ? `<div style="font-size:9px;font-weight:700;color:#d97706;margin-top:4px">+${sq.xp} XP</div>` : '';
+      const countBadge = pieces.length > 0
+        ? `<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#1a7fbf;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff">${pieces.length}</div>`
+        : '';
 
-    let bgColor = '#f0f7fc', borderColor = '#b0d4e8', strokeW = 2;
-    if(sq.isStart) { bgColor = '#fffbeb'; borderColor = '#d97706'; }
-    if(sq.isGoal)  { bgColor = '#fdf2f8'; borderColor = '#db2777'; }
-    if(pieces.length > 0 && !sq.isStart && !sq.isGoal) { bgColor = '#f0fdf4'; borderColor = '#059669'; }
+      const namesHtml = pieces.map(p => {
+        const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
+        return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:12px;font-weight:600;color:#0f2a3d;white-space:nowrap">
+          <span style="font-size:14px">${p.emoji}</span>
+          <span>${surname}</span>
+        </div>`;
+      }).join('');
 
-    // 名前札（絵文字＋苗字を縦に並べる）
-    const visiblePieces = pieces.slice(0, 20);
-    const pieceStartY = y - SQ_H/2 + HEADER_H;
-
-    const piecesSvg = visiblePieces.map((p, pi) => {
-      const py = pieceStartY + pi * PIECE_GAP_Y + 16;
-      const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
-      return `
-        <text x="${x - SQ_W/2 + 16}" y="${py}" font-size="15">${p.emoji}</text>
-        <text x="${x - SQ_W/2 + 36}" y="${py}" font-size="11" font-weight="600" fill="#0f2a3d">${surname.slice(0,5)}</text>`;
+      return `<div ${clickAttr} style="position:relative;flex:1;min-width:160px;max-width:220px;background:${bg};border:2px solid ${border};border-radius:14px;padding:10px 12px;transition:transform .15s" onmouseenter="this.style.transform='scale(1.03)'" onmouseleave="this.style.transform='scale(1)'">
+        ${countBadge}
+        <div style="text-align:center;margin-bottom:6px">
+          ${stepLabel}
+          <div style="font-size:26px;line-height:1.2">${sq.icon}</div>
+          <div style="font-size:10px;font-weight:700;color:#4a7190;margin-top:2px">${(sq.label||sq.title||'').slice(0,12)}</div>
+          ${xpLabel}
+        </div>
+        ${pieces.length > 0 ? `<div style="border-top:1px solid ${border};opacity:.5;margin:4px 0"></div>` : ''}
+        <div style="display:flex;flex-direction:column;gap:1px">${namesHtml}</div>
+      </div>`;
     }).join('');
 
-    // 人数バッジ
-    const countBadge = pieces.length > 0
-      ? `<circle cx="${x + SQ_W/2 - 12}" cy="${y - SQ_H/2 + 12}" r="11" fill="#1a7fbf"/>
-         <text x="${x + SQ_W/2 - 12}" y="${y - SQ_H/2 + 16}" text-anchor="middle" font-size="10" fill="white" font-weight="800">${pieces.length}</text>`
+    // 行間の矢印（最終行以外）
+    const arrowHtml = row < numRows - 1
+      ? `<div style="display:flex;justify-content:center;align-items:center;height:28px;color:#b0d4e8;font-size:20px">↕</div>`
       : '';
 
-    squaresHtml += `
-      <g style="cursor:${clickFn?'pointer':'default'}" onclick="${clickFn}">
-        <rect x="${x - SQ_W/2}" y="${y - SQ_H/2}" width="${SQ_W}" height="${SQ_H}" rx="16"
-          fill="${bgColor}" stroke="${borderColor}" stroke-width="${strokeW}"/>
-        <text x="${x}" y="${y - SQ_H/2 + 22}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
-        <text x="${x}" y="${y - SQ_H/2 + 46}" text-anchor="middle" font-size="26">${sq.icon}</text>
-        <text x="${x}" y="${y - SQ_H/2 + 64}" text-anchor="middle" font-size="10" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,12)}</text>
-        <line x1="${x-SQ_W/2+10}" y1="${y-SQ_H/2+76}" x2="${x+SQ_W/2-10}" y2="${y-SQ_H/2+76}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
-        ${piecesSvg}
-        ${countBadge}
-        ${sq.xp ? `<text x="${x}" y="${y+SQ_H/2-6}" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
-      </g>`;
-  });
+    // 行内の矢印（蛇行の向き）
+    const arrowDir = row % 2 === 0 ? '→' : '←';
+    const rowWithArrows = rowItems.map((i, ci) => {
+      if(i === null) return `<div style="flex:1;min-width:160px;max-width:220px"></div>`;
+      const sq = allSquares[i];
+      const pieces = playerPositions[i] || [];
+      let bg = '#f0f7fc', border = '#b0d4e8';
+      if(sq.isStart){ bg='#fffbeb'; border='#d97706'; }
+      if(sq.isGoal){ bg='#fdf2f8'; border='#db2777'; }
+      if(pieces.length > 0 && !sq.isStart && !sq.isGoal){ bg='#f0fdf4'; border='#059669'; }
+      const clickAttr2 = (!sq.isStart && !sq.isGoal) ? `onclick="openMission(${sq.id})"` : '';
+      const stepLabel2 = (i > 0 && i < total-1) ? `<div style="font-size:9px;font-weight:700;color:${border};opacity:.8;margin-bottom:2px;letter-spacing:.08em">STEP ${i}</div>` : '';
+      const xpLabel2 = sq.xp ? `<div style="font-size:9px;font-weight:700;color:#d97706;margin-top:4px">+${sq.xp} XP</div>` : '';
+      const countBadge2 = pieces.length > 0
+        ? `<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#1a7fbf;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff">${pieces.length}</div>`
+        : '';
+      const namesHtml2 = pieces.map(p => {
+        const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
+        return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:12px;font-weight:600;color:#0f2a3d;white-space:nowrap">
+          <span style="font-size:14px">${p.emoji}</span><span>${surname}</span></div>`;
+      }).join('');
+      const showArrow = ci < rowItems.filter(x=>x!==null).length - 1;
+      const arrowEl = showArrow ? `<div style="display:flex;align-items:center;font-size:18px;color:#b0d4e8;flex-shrink:0;padding:0 4px">${arrowDir}</div>` : '';
+      return `
+        <div style="position:relative;flex:1;min-width:160px;max-width:220px;background:${bg};border:2px solid ${border};border-radius:14px;padding:10px 12px;transition:transform .15s;cursor:${(!sq.isStart&&!sq.isGoal)?'pointer':'default'}" ${clickAttr2} onmouseenter="this.style.transform='scale(1.03)'" onmouseleave="this.style.transform='scale(1)'">
+          ${countBadge2}
+          <div style="text-align:center;margin-bottom:6px">
+            ${stepLabel2}
+            <div style="font-size:26px;line-height:1.2">${sq.icon}</div>
+            <div style="font-size:10px;font-weight:700;color:#4a7190;margin-top:2px">${(sq.label||sq.title||'').slice(0,12)}</div>
+            ${xpLabel2}
+          </div>
+          ${pieces.length > 0 ? `<div style="border-top:1px solid ${border};opacity:.5;margin:4px 0 6px"></div>` : ''}
+          <div style="display:flex;flex-direction:column;gap:1px">${namesHtml2}</div>
+        </div>
+        ${arrowEl}`;
+    }).join('');
 
+    cardsHtml += `
+      <div style="display:flex;flex-direction:row;gap:10px;align-items:flex-start;justify-content:center;margin-bottom:0">
+        ${rowWithArrows}
+      </div>
+      ${arrowHtml}`;
+  }
 
   // 進捗サマリー
   const summaryRows = candidates.map((c, idx) => {
@@ -2270,17 +2272,8 @@ function renderAdminRoadmap(){
   }).join('');
 
   board.innerHTML = `
-    <div style="overflow-x:auto;overflow-y:visible;margin-bottom:24px">
-      <svg viewBox="0 0 ${W} ${SVG_H}" width="100%" style="min-width:420px;overflow:visible">
-        <defs>
-          <marker id="adm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>
-          </marker>
-        </defs>
-        <path d="${pathD}" fill="none" stroke="#daeef8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="${pathD}" fill="none" stroke="#c8e2f0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 5" marker-end="url(#adm-arrow)"/>
-        ${squaresHtml}
-      </svg>
+    <div style="padding:8px 0 24px">
+      ${cardsHtml}
     </div>
     <div class="card" style="margin-top:8px">
       <div class="card-head"><h2>📊 個人別進捗</h2></div>

@@ -1225,44 +1225,71 @@ async function loadAll(){
       });
     }
 
-    if(mt?.length){
-      missions = mt.map(m=>({
-        id: m.id,
-        icon: m.icon||'📋',
-        title: m.title,
-        desc: m.description||'',
-        cat: m.cat||'',
-        xp: Number(m.xp)||0,
-        done: false,
-        stamp: '✅',
-        locked: false,
-        submitType: m.submit_type||'check',
-        submittedFile: null
-      }));
+    if(Array.isArray(mt)){
+      // Supabaseが正：取得できたら常に上書き（空でもデフォルトを使わない）
+      if(mt.length > 0){
+        missions = mt.map(m=>({
+          id: m.id,
+          icon: m.icon||'📋',
+          title: m.title,
+          desc: m.description||'',
+          cat: m.cat||'',
+          xp: Number(m.xp)||0,
+          done: false,
+          stamp: '✅',
+          locked: false,
+          submitType: m.submit_type||'check',
+          submittedFile: null
+        }));
+      } else {
+        // Supabaseが空 → デフォルトミッションをSupabaseに初期保存
+        const defaults = missions.map(m=>({
+          id: m.id,
+          icon: m.icon,
+          title: m.title,
+          description: m.desc,
+          cat: m.cat,
+          xp: m.xp,
+          submit_type: m.submitType||'check'
+        }));
+        Promise.all(defaults.map(d => dbUpsert('mission_templates', d))).catch(()=>{});
+      }
     }
 
-    if(st?.length){
-      schedTypes.length = 0;
-      st.forEach(s=>schedTypes.push({
-        id: String(s.id),
-        icon: s.icon||'📅',
-        name: s.name,
-        desc: s.description||'',
-        dur: s.duration||'30分'
-      }));
+    if(Array.isArray(st)){
+      if(st.length > 0){
+        schedTypes.length = 0;
+        st.forEach(s=>schedTypes.push({
+          id: String(s.id),
+          icon: s.icon||'📅',
+          name: s.name,
+          desc: s.description||'',
+          dur: s.duration||'30分'
+        }));
+      } else {
+        // 空なら初期データをSupabaseへ保存
+        const defaults = schedTypes.map(s=>({id:s.id, icon:s.icon, name:s.name, description:s.desc, duration:s.dur}));
+        Promise.all(defaults.map(d=>dbUpsert('schedule_types', d))).catch(()=>{});
+      }
     }
 
-    if(sc?.length){
-      schedules.length = 0;
-      sc.forEach(s=>schedules.push({
-        id: s.id,
-        month: s.month,
-        day: s.day,
-        title: s.title,
-        detail: s.detail||'',
-        tag: s.tag||'req',
-        tagLabel: s.tag_label||''
-      }));
+    if(Array.isArray(sc)){
+      if(sc.length > 0){
+        schedules.length = 0;
+        sc.forEach(s=>schedules.push({
+          id: s.id,
+          month: s.month,
+          day: s.day,
+          title: s.title,
+          detail: s.detail||'',
+          tag: s.tag||'req',
+          tagLabel: s.tag_label||''
+        }));
+      } else {
+        // 空なら初期データをSupabaseへ保存
+        const defaults = schedules.map(s=>({id:s.id, month:s.month, day:s.day, title:s.title, detail:s.detail, tag:s.tag, tag_label:s.tagLabel}));
+        Promise.all(defaults.map(d=>dbUpsert('schedules', d))).catch(()=>{});
+      }
     }
 
   } catch(e){ console.warn('loadAll error', e); }
@@ -3168,7 +3195,22 @@ async function saveSetting(type, id, btnEl){
       record.id = Date.now();
       missions.push({id:record.id, icon:record.icon, title:record.title, desc:record.description, cat:record.cat, xp:record.xp, done:false, stamp:'✅', locked:false, submitType:record.submit_type, submittedFile:null});
     }
-    await dbUpsert('mission_templates', record);
+    const saved = await dbUpsert('mission_templates', record);
+    // 保存後に再取得して missions を最新化
+    try {
+      const mt2 = await dbFetch('mission_templates');
+      if(Array.isArray(mt2) && mt2.length > 0){
+        missions = mt2.map(m=>({
+          id: m.id, icon: m.icon||'📋', title: m.title, desc: m.description||'',
+          cat: m.cat||'', xp: Number(m.xp)||0, done: false, stamp: '✅',
+          locked: false, submitType: m.submit_type||'check', submittedFile: null
+        }));
+      }
+    } catch(e){}
+    closeSettingModal();
+    renderSettings();
+    showToast('✅ ミッションを保存しました');
+    return;
   } else if(type==='schedtype'){
     const record = {icon: document.getElementById('sm-icon').value||'📅',name: document.getElementById('sm-title').value.trim(),description: document.getElementById('sm-desc').value.trim(),duration: document.getElementById('sm-dur').value.trim()||'30分'};
     if(!record.name) return;
@@ -3181,6 +3223,14 @@ async function saveSetting(type, id, btnEl){
       schedTypes.push({id:String(record.id), icon:record.icon, name:record.name, desc:record.description, dur:record.duration});
     }
     await dbUpsert('schedule_types', record);
+    try {
+      const st2 = await dbFetch('schedule_types');
+      if(Array.isArray(st2) && st2.length > 0){
+        schedTypes.length = 0;
+        st2.forEach(s=>schedTypes.push({id:String(s.id), icon:s.icon||'📅', name:s.name, desc:s.description||'', dur:s.duration||'30分'}));
+      }
+    } catch(e){}
+    closeSettingModal(); renderSettings(); showToast('✅ 面談種類を保存しました'); return;
   } else if(type==='schedule'){
     const tagMap = {req:'必須参加', dead:'締め切り', opt:'任意参加'};
     const tag = document.getElementById('sm-tag').value;
@@ -3195,6 +3245,16 @@ async function saveSetting(type, id, btnEl){
       schedules.push({id:record.id, month:record.month, day:record.day, title:record.title, detail:record.detail, tag:record.tag, tagLabel:record.tag_label});
     }
     await dbUpsert('schedules', record);
+    try {
+      const sc2 = await dbFetch('schedules');
+      if(Array.isArray(sc2) && sc2.length > 0){
+        schedules.length = 0;
+        sc2.forEach(s=>schedules.push({id:s.id, month:s.month, day:s.day, title:s.title, detail:s.detail||'', tag:s.tag||'req', tagLabel:s.tag_label||''}));
+      } else if(Array.isArray(sc2) && sc2.length === 0){
+        schedules.length = 0;
+      }
+    } catch(e){}
+    closeSettingModal(); renderSettings(); showToast('✅ スケジュールを保存しました'); return;
   } else if(type==='news'){
     const today = new Date().toLocaleDateString('ja-JP');
     const saveBtn = btnEl || document.getElementById('sm-news-save-btn');
@@ -3261,14 +3321,35 @@ async function deleteSetting(type, id){
     const idx = missions.findIndex(x=>x.id===id);
     if(idx>-1) missions.splice(idx,1);
     await dbDelete('mission_templates', id);
+    // 削除後にSupabaseから再取得して同期
+    try {
+      const mt2 = await dbFetch('mission_templates');
+      if(Array.isArray(mt2) && mt2.length > 0){
+        missions = mt2.map(m=>({
+          id: m.id, icon: m.icon||'📋', title: m.title, desc: m.description||'',
+          cat: m.cat||'', xp: Number(m.xp)||0, done: false, stamp: '✅',
+          locked: false, submitType: m.submit_type||'check', submittedFile: null
+        }));
+      } else if(Array.isArray(mt2) && mt2.length === 0){
+        missions = [];
+      }
+    } catch(e){}
   } else if(type==='schedtype'){
     const idx = schedTypes.findIndex(x=>String(x.id)===String(id));
     if(idx>-1) schedTypes.splice(idx,1);
     await dbDelete('schedule_types', id);
+    try {
+      const st2 = await dbFetch('schedule_types');
+      if(Array.isArray(st2)){ schedTypes.length=0; st2.forEach(s=>schedTypes.push({id:String(s.id), icon:s.icon||'📅', name:s.name, desc:s.description||'', dur:s.duration||'30分'})); }
+    } catch(e){}
   } else if(type==='schedule'){
     const idx = schedules.findIndex(x=>x.id===id);
     if(idx>-1) schedules.splice(idx,1);
     await dbDelete('schedules', id);
+    try {
+      const sc2 = await dbFetch('schedules');
+      if(Array.isArray(sc2)){ schedules.length=0; sc2.forEach(s=>schedules.push({id:s.id, month:s.month, day:s.day, title:s.title, detail:s.detail||'', tag:s.tag||'req', tagLabel:s.tag_label||''})); }
+    } catch(e){}
   } else if(type==='news'){
     const idx = articles.findIndex(x=>x.id===id);
     if(idx>-1) articles.splice(idx,1);

@@ -3275,6 +3275,7 @@ function loginSuccess(candidate){
   document.getElementById('add-news-btn').style.display='none';
   document.getElementById('mode-admin').style.display='none';
   document.getElementById('mode-user').style.display='none';
+  const offerNavLogin=document.getElementById('nav-offers'); if(offerNavLogin) offerNavLogin.style.display='none';
   document.getElementById('nav-section-candidate').style.display='block';
   document.getElementById('sf-name').textContent = candidate.name;
   document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';

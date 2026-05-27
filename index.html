@@ -2148,11 +2148,11 @@ function renderAdminRoadmap(){
 
   // レイアウト定数（管理者用は少し大きめ）
   const COLS = 3;
-  const SQ = 140;
-  const MARGIN_X = 90;
-  const MARGIN_Y = 70;
-  const colW = 210;
-  const rowH = 230;
+  const SQ = 180;
+  const MARGIN_X = 110;
+  const MARGIN_Y = 90;
+  const colW = 260;
+  const rowH = 280;
   const W = MARGIN_X * 2 + colW * (COLS - 1);
   const numRows = Math.ceil(total / COLS);
   const SVG_H = MARGIN_Y * 2 + rowH * (numRows - 1) + SQ + 20;
@@ -2200,19 +2200,20 @@ function renderAdminRoadmap(){
       ? '' // 誰もいない＝全員通過済み
       : '';
 
-    // 名前札（絵文字＋名前を縦に並べる、最大10人まで表示）
-    const PIECE_AREA_TOP = y - SQ/2 + 62;
-    const PIECE_GAP_Y = 22;
+    // 名前札（絵文字＋苗字を縦に並べる、最大10人まで表示）
+    const PIECE_AREA_TOP = y - SQ/2 + 78;
+    const PIECE_GAP_Y = 24;
     const visiblePieces = pieces.slice(0, 10);
     const totalPieceH = visiblePieces.length * PIECE_GAP_Y;
-    const pieceStartY = PIECE_AREA_TOP + Math.max(0, (SQ - 62 - totalPieceH) / 2);
+    const pieceStartY = PIECE_AREA_TOP + Math.max(0, (SQ - 78 - totalPieceH) / 2);
 
     const piecesSvg = visiblePieces.map((p, pi) => {
       const py = pieceStartY + pi * PIECE_GAP_Y + 16;
-      // 絵文字＋名前を横並びで1行に
+      const surname = p.name ? p.name.split(/[\s　]/)[0] : p.name; // 苗字のみ
+      // 絵文字＋苗字を横並びで1行に
       return `
-        <text x="${x - SQ/2 + 14}" y="${py}" font-size="14">${p.emoji}</text>
-        <text x="${x - SQ/2 + 30}" y="${py}" font-size="10" font-weight="600" fill="#0f2a3d">${p.name.slice(0,7)}</text>`;
+        <text x="${x - SQ/2 + 16}" y="${py}" font-size="15">${p.emoji}</text>
+        <text x="${x - SQ/2 + 36}" y="${py}" font-size="11" font-weight="600" fill="#0f2a3d">${surname.slice(0,5)}</text>`;
     }).join('');
 
     // 人数バッジ
@@ -2223,15 +2224,15 @@ function renderAdminRoadmap(){
 
     squaresHtml += `
       <g style="cursor:${clickFn?'pointer':'default'}" onclick="${clickFn}">
-        <rect x="${x - SQ/2}" y="${y - SQ/2}" width="${SQ}" height="${SQ}" rx="18"
+        <rect x="${x - SQ/2}" y="${y - SQ/2}" width="${SQ}" height="${SQ}" rx="20"
           fill="${bgColor}" stroke="${borderColor}" stroke-width="${strokeW}"/>
-        <text x="${x}" y="${y - SQ/2 + 22}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
-        <text x="${x}" y="${y - SQ/2 + 40}" text-anchor="middle" font-size="24">${sq.icon}</text>
-        <text x="${x}" y="${y - SQ/2 + 56}" text-anchor="middle" font-size="9" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,10)}</text>
-        <line x1="${x-SQ/2+8}" y1="${y-SQ/2+62}" x2="${x+SQ/2-8}" y2="${y-SQ/2+62}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
+        <text x="${x}" y="${y - SQ/2 + 24}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
+        <text x="${x}" y="${y - SQ/2 + 50}" text-anchor="middle" font-size="26">${sq.icon}</text>
+        <text x="${x}" y="${y - SQ/2 + 68}" text-anchor="middle" font-size="10" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,12)}</text>
+        <line x1="${x-SQ/2+10}" y1="${y-SQ/2+78}" x2="${x+SQ/2-10}" y2="${y-SQ/2+78}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
         ${piecesSvg}
         ${countBadge}
-        ${sq.xp ? `<text x="${x}" y="${y+SQ/2-5}" text-anchor="middle" font-size="8" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
+        ${sq.xp ? `<text x="${x}" y="${y+SQ/2-6}" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
       </g>`;
   });
 

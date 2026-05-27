@@ -616,7 +616,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="nav-item" onclick="nav('settings',this)" id="nav-settings"><span class="nav-icon">⚙️</span><span class="nav-label">設定</span></div>
     <div class="nav-item" id="nav-offers" onclick="nav('offers',this)"><span class="nav-icon">💌</span><span class="nav-label">交流オファー</span><span class="nav-badge red" id="offer-badge" style="display:none">新</span></div>
   </div>
-  <div class="sidebar-section">
+  <div class="sidebar-section" id="nav-section-candidate">
     <div class="sidebar-label">内定者向け</div>
     <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
     <div class="nav-item" onclick="nav('schedule',this)"><span class="nav-icon">📅</span><span class="nav-label">日程調整</span></div>
@@ -3276,6 +3276,7 @@ function loginSuccess(candidate){
   document.getElementById('add-news-btn').style.display='none';
   document.getElementById('mode-admin').style.display='none';
   document.getElementById('mode-user').style.display='none';
+  document.getElementById('nav-section-candidate').style.display='block';
   document.getElementById('sf-name').textContent = candidate.name;
   document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';
   document.getElementById('sf-av').textContent = candidate.name.charAt(0);
@@ -3398,6 +3399,7 @@ function doLogout(){
   loginErrHide();
   document.getElementById('mode-admin').style.display='';
   document.getElementById('mode-user').style.display='';
+  document.getElementById('nav-section-candidate').style.display='none';
 }
 
 function goAdminMode(){
@@ -3414,6 +3416,7 @@ function goAdminMode(){
   document.getElementById('lbl-main').style.display='block';
   document.getElementById('add-news-btn').style.display='inline-flex';
   const offerNavAdmin=document.getElementById('nav-offers'); if(offerNavAdmin) offerNavAdmin.style.display='flex';
+  document.getElementById('nav-section-candidate').style.display='none';
   document.getElementById('sf-name').textContent='田村 さくら';
   document.getElementById('sf-role').textContent='採用担当';
   document.getElementById('sf-av').textContent='田';

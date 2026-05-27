@@ -1169,43 +1169,46 @@ async function dbFetch(table){
     return [];
   }
 }
+// 新規IDとして登録済みのセット（POSTすべきもの）
+const _newIds = {};
+
 async function dbUpsert(table, data){
-  // idがあればPATCH(更新)、なければPOST(新規)
-  const isArray = Array.isArray(data);
-  const items = isArray ? data : [data];
-  try{
-    const results = await Promise.all(items.map(async item => {
+  // DELETE → INSERT で確実に保存（upsert代わり）
+  const items = Array.isArray(data) ? data : [data];
+  try {
+    for(const item of items){
       if(item.id !== undefined && item.id !== null){
-        // 既存レコードをPATCHで更新
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(item.id)}`, {
-          method: 'PATCH',
-          headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
-          body: JSON.stringify(item)
+        // まず既存行を削除
+        await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(item.id)}`, {
+          method: 'DELETE',
+          headers: {'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`}
         });
-        if(!res.ok){
-          // PATCHが404等の場合はPOSTで新規作成
-          const res2 = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
-            body: JSON.stringify(item)
-          });
-          if(!res2.ok){ const t=await res2.text(); console.warn('dbUpsert POST error',table,res2.status,t); }
-          return res2;
-        }
-        return res;
-      } else {
-        // idなし → 新規POST
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-          method: 'POST',
-          headers: {'apikey': SUPABASE_KEY,'Authorization': `Bearer ${SUPABASE_KEY}`,'Content-Type': 'application/json','Prefer': 'return=minimal'},
-          body: JSON.stringify(item)
-        });
-        if(!res.ok){ const t=await res.text(); console.warn('dbUpsert POST error',table,res.status,t); }
-        return res;
       }
-    }));
-    return results[0];
-  } catch(e){ console.warn('dbUpsert network error',table,e); }
+      // 新規INSERT
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(item)
+      });
+      if(!res.ok){
+        const t = await res.text();
+        console.warn('[dbUpsert] error', table, res.status, t);
+      } else {
+        console.log('[dbUpsert] ok', table, item.id);
+      }
+    }
+  } catch(e) {
+    console.warn('[dbUpsert] network error', table, e);
+  }
+}
+
+function dbInsert(table, data){
+  return dbUpsert(table, data);
 }
 async function dbDelete(table, id){
   return fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
@@ -1559,7 +1562,7 @@ async function addCandidate(){
   ['ac-name','ac-univ','ac-dept','ac-email'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ac-recruiter').value='';
   closeAddCandModal();
-  await dbUpsert('candidates', candidates[candidates.length-1]);
+  await dbInsert('candidates', candidates[candidates.length-1]);
   // Supabaseから再取得して同期
   try {
     const c2 = await dbFetch('candidates');
@@ -3244,7 +3247,8 @@ async function saveSetting(type, id, btnEl){
       missions.push({id:record.id, icon:record.icon, title:record.title, desc:record.description, cat:record.cat, xp:record.xp, done:false, stamp:'✅', locked:false, submitType:record.submit_type, submittedFile:null});
     }
     console.log('[saveSetting] saving mission_template:', record);
-    const saved = await dbUpsert('mission_templates', record);
+    const isNewMission = !id || id === 'null';
+    const saved = isNewMission ? await dbInsert('mission_templates', record) : await dbUpsert('mission_templates', record);
     console.log('[saveSetting] save result:', saved?.status);
     // 保存後に再取得して missions を最新化
     try {
@@ -3272,7 +3276,8 @@ async function saveSetting(type, id, btnEl){
       record.id = Date.now();
       schedTypes.push({id:String(record.id), icon:record.icon, name:record.name, desc:record.description, dur:record.duration});
     }
-    await dbUpsert('schedule_types', record);
+    const isNewSchedType = !id || id === 'null';
+    isNewSchedType ? await dbInsert('schedule_types', record) : await dbUpsert('schedule_types', record);
     try {
       const st2 = await dbFetch('schedule_types');
       if(Array.isArray(st2) && st2.length > 0){
@@ -3295,7 +3300,8 @@ async function saveSetting(type, id, btnEl){
       schedules.push({id:record.id, month:record.month, day:record.day, title:record.title, detail:record.detail, tag:record.tag, tagLabel:record.tag_label});
     }
     console.log('[saveSetting] saving schedule:', record);
-    await dbUpsert('schedules', record);
+    const isNewSchedule = !id || id === 'null';
+    isNewSchedule ? await dbInsert('schedules', record) : await dbUpsert('schedules', record);
     console.log('[saveSetting] schedule saved');
     try {
       const sc2 = await dbFetch('schedules');

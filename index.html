@@ -583,6 +583,117 @@ tbody tr:hover td{background:var(--s2)}
 .emoji-btn:hover:not(.used){border-color:var(--accent);background:var(--s3)}
 .emoji-btn.selected{border-color:var(--accent);background:rgba(26,127,191,.1)}
 .emoji-btn.used{opacity:.25;cursor:not-allowed;filter:grayscale(1)}
+
+/* ═══════════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════════ */
+@media(max-width:768px){
+  /* サイドバーをボトムナビに変える */
+  html,body{overflow:hidden}
+  .body-wrap{flex-direction:column}
+  .sidebar{
+    width:100%;height:56px;
+    flex-direction:row;
+    border-right:none;border-top:1px solid var(--border);
+    order:2;overflow-y:visible;overflow-x:auto;
+    padding:0;flex-shrink:0;
+    position:fixed;bottom:0;left:0;right:0;z-index:40;
+    box-shadow:0 -2px 8px rgba(0,80,140,.08);
+  }
+  .sidebar-section{
+    display:flex;flex-direction:row;
+    padding:0;gap:0;flex:1;
+  }
+  .sidebar-label{display:none}
+  .nav-item{
+    flex-direction:column;gap:2px;
+    padding:6px 4px;border-radius:0;
+    margin-bottom:0;border:none;
+    flex:1;min-width:52px;justify-content:center;
+    border-top:2px solid transparent;
+  }
+  .nav-item.active{
+    background:none;border-color:var(--accent);
+    border-left:none;border-right:none;border-bottom:none;
+  }
+  .nav-icon{font-size:18px;width:auto}
+  .nav-label{font-size:9px;font-weight:600;letter-spacing:.02em;color:var(--text2);text-align:center}
+  .nav-item.active .nav-label{color:var(--accent)}
+  .nav-badge{font-size:8px;padding:1px 4px;position:absolute;top:4px;right:8px}
+  .nav-item{position:relative}
+  .sidebar-footer{display:none}
+  #nav-section-candidate{display:flex;flex-direction:row;flex:1}
+
+  /* メインコンテンツ */
+  .main{
+    flex:1;overflow-y:auto;
+    padding-bottom:64px; /* ボトムナビ分の余白 */
+    margin-bottom:0;
+  }
+  .page{padding:16px 14px}
+
+  /* トップバー */
+  .topbar{padding:0 14px;height:50px}
+  .logo{font-size:18px}
+  .mode-pill{display:none} /* スマホでは管理者/内定者切り替えを非表示 */
+  .user-name{display:none}
+
+  /* 統計グリッド：2列に */
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat-val{font-size:22px}
+
+  /* 2カラム→1カラム */
+  .two-col{grid-template-columns:1fr}
+  .three-col{grid-template-columns:1fr}
+
+  /* ニュースレイアウト */
+  .news-page-layout{grid-template-columns:1fr}
+
+  /* ページタイトル */
+  .page-title{font-size:22px}
+
+  /* カード */
+  .card-head{padding:12px 14px}
+  .card-body{padding:14px}
+
+  /* テーブル：横スクロール */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:480px}
+  td,th{padding:10px 10px;font-size:12px}
+
+  /* モーダル */
+  .modal-overlay{padding:0;align-items:flex-end}
+  .modal{
+    border-radius:20px 20px 0 0;
+    max-height:90vh;
+    max-width:100%;
+  }
+  .form-grid{grid-template-columns:1fr}
+
+  /* XPバー */
+  .xp-bar-wrap{padding:14px 16px}
+
+  /* バッジグリッド：3列 */
+  .badge-grid{grid-template-columns:repeat(3,1fr)}
+
+  /* ランキング */
+  .rank-item{padding:10px 12px}
+
+  /* ミッション */
+  .mission-item{padding:10px 12px}
+
+  /* スケジュール */
+  .sched-item{padding:10px 12px}
+  .sched-d{font-size:18px}
+}
+
+@media(max-width:400px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:6px}
+  .stat-card{padding:12px}
+  .stat-val{font-size:20px}
+  .badge-grid{grid-template-columns:repeat(2,1fr)}
+}
+
 </style>
 </head>
 <body>
@@ -1402,6 +1513,9 @@ function nav(page,el){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if(el) el.classList.add('active');
+  // モバイル：ページ切り替え時に上にスクロール
+  const mainEl = document.querySelector('.main');
+  if(mainEl) mainEl.scrollTop = 0;
   if(page==='dashboard') renderDashboard();
   if(page==='candidates') renderCandidates();
   if(page==='team') renderTeam();
@@ -4021,6 +4135,30 @@ function backToLogin(){
   document.getElementById('login-overlay').style.display = 'flex';
 }
 
+
+// ── モバイル用ナビラベル短縮 ──
+function applyMobileNavLabels(){
+  const isMobile = window.innerWidth <= 768;
+  const labels = {
+    'nav-dashboard': ['🏠', 'ホーム'],
+    'nav-candidates': ['👥', '内定者'],
+    'nav-team': ['🧑‍💼', '担当者'],
+    'nav-admin-roadmap': ['🗺️', 'マップ'],
+    'nav-settings': ['⚙️', '設定'],
+    'nav-missions': ['🎯', 'ミッション'],
+    'nav-matching': ['💼', 'マッチング'],
+  };
+  if(isMobile){
+    Object.entries(labels).forEach(([id, [icon, short]]) => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      const labelEl = el.querySelector('.nav-label');
+      if(labelEl) labelEl.textContent = short;
+    });
+  }
+}
+window.addEventListener('resize', applyMobileNavLabels);
+
 // ═══════════ INIT ═══════════
 async function init(){
   const loading = document.createElement('div');
@@ -4036,6 +4174,7 @@ async function init(){
   if(document.body.contains(loading)) document.body.removeChild(loading);
   document.querySelector('.topbar').style.display='none';
   document.querySelector('.body-wrap').style.display='none';
+  applyMobileNavLabels();
 }
 init();
 </script>

@@ -2132,7 +2132,6 @@ function renderAdminRoadmap(){
   ];
   const total = allSquares.length;
 
-  // 各内定者の現在地
   const playerPositions = {};
   candidates.forEach((c, idx) => {
     const prog = missionProgress[c.id] || {};
@@ -2146,109 +2145,101 @@ function renderAdminRoadmap(){
     playerPositions[pos].push({emoji, name: c.name, doneCount});
   });
 
-  // カードをHTMLで作る（SVGを使わずflexboxグリッド）
   const COLS = 3;
   const numRows = Math.ceil(total / COLS);
 
-  // 蛇行順にカード生成
-  let cardsHtml = '';
-  // グリッドの各行を構築（蛇行）
-  for(let row = 0; row < numRows; row++){
-    const rowItems = [];
-    for(let col = 0; col < COLS; col++){
-      const i = row * COLS + col;
-      if(i < total) rowItems.push(i);
-      else rowItems.push(null);
-    }
-    // 奇数行は右から左
-    if(row % 2 === 1) rowItems.reverse();
+  function makeCard(i) {
+    const sq = allSquares[i];
+    const pieces = playerPositions[i] || [];
 
-    let rowHtml = rowItems.map(i => {
-      if(i === null) return `<div style="flex:1;min-width:160px;max-width:220px"></div>`;
-      const sq = allSquares[i];
-      const pieces = playerPositions[i] || [];
+    let bg = '#f0f7fc', border = '#b0d4e8';
+    if(sq.isStart){ bg='#fffbeb'; border='#d97706'; }
+    if(sq.isGoal){ bg='#fdf2f8'; border='#db2777'; }
+    if(pieces.length > 0 && !sq.isStart && !sq.isGoal){ bg='#f0fdf4'; border='#059669'; }
 
-      let bg = '#f0f7fc', border = '#b0d4e8';
-      if(sq.isStart){ bg='#fffbeb'; border='#d97706'; }
-      if(sq.isGoal){ bg='#fdf2f8'; border='#db2777'; }
-      if(pieces.length > 0 && !sq.isStart && !sq.isGoal){ bg='#f0fdf4'; border='#059669'; }
+    const clickAttr = (!sq.isStart && !sq.isGoal)
+      ? `onclick="openMission(${sq.id})" style="cursor:pointer"`
+      : `style="cursor:default"`;
 
-      const clickAttr = (!sq.isStart && !sq.isGoal) ? `onclick="openMission(${sq.id})" style="cursor:pointer"` : '';
-      const stepLabel = (i > 0 && i < total-1) ? `<div style="font-size:9px;font-weight:700;color:${border};opacity:.8;margin-bottom:2px;letter-spacing:.08em">STEP ${i}</div>` : '';
-      const xpLabel = sq.xp ? `<div style="font-size:9px;font-weight:700;color:#d97706;margin-top:4px">+${sq.xp} XP</div>` : '';
-      const countBadge = pieces.length > 0
-        ? `<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#1a7fbf;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff">${pieces.length}</div>`
-        : '';
+    const stepLabel = (i > 0 && i < total-1)
+      ? `<div style="font-size:9px;font-weight:700;color:${border};opacity:.8;letter-spacing:.08em;margin-bottom:2px">STEP ${i}</div>`
+      : '';
 
-      const namesHtml = pieces.map(p => {
-        const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
-        return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:12px;font-weight:600;color:#0f2a3d;white-space:nowrap">
-          <span style="font-size:14px">${p.emoji}</span>
-          <span>${surname}</span>
-        </div>`;
-      }).join('');
+    const xpLabel = sq.xp
+      ? `<div style="font-size:9px;font-weight:700;color:#d97706;margin-top:2px">+${sq.xp} XP</div>`
+      : '';
 
-      return `<div ${clickAttr} style="position:relative;flex:1;min-width:160px;max-width:220px;background:${bg};border:2px solid ${border};border-radius:14px;padding:10px 12px;transition:transform .15s" onmouseenter="this.style.transform='scale(1.03)'" onmouseleave="this.style.transform='scale(1)'">
-        ${countBadge}
-        <div style="text-align:center;margin-bottom:6px">
-          ${stepLabel}
-          <div style="font-size:26px;line-height:1.2">${sq.icon}</div>
-          <div style="font-size:10px;font-weight:700;color:#4a7190;margin-top:2px">${(sq.label||sq.title||'').slice(0,12)}</div>
-          ${xpLabel}
-        </div>
-        ${pieces.length > 0 ? `<div style="border-top:1px solid ${border};opacity:.5;margin:4px 0"></div>` : ''}
-        <div style="display:flex;flex-direction:column;gap:1px">${namesHtml}</div>
+    const countBadge = pieces.length > 0
+      ? `<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#1a7fbf;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;z-index:1">${pieces.length}</div>`
+      : '';
+
+    // 名前を2列グリッドで表示（最大12人まで、残りは省略）
+    const visiblePieces = pieces.slice(0, 12);
+    const namesHtml = visiblePieces.map(p => {
+      const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
+      return `<div style="display:flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#0f2a3d;overflow:hidden;white-space:nowrap">
+        <span style="font-size:13px;flex-shrink:0">${p.emoji}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis">${surname}</span>
       </div>`;
     }).join('');
 
-    // 行間の矢印（最終行以外）
-    const arrowHtml = row < numRows - 1
-      ? `<div style="display:flex;justify-content:center;align-items:center;height:28px;color:#b0d4e8;font-size:20px">↕</div>`
+    const moreLabel = pieces.length > 12
+      ? `<div style="font-size:10px;color:#90b8cc;text-align:center;margin-top:2px">他${pieces.length - 12}人</div>`
       : '';
 
-    // 行内の矢印（蛇行の向き）
+    const namesSection = pieces.length > 0 ? `
+      <div style="border-top:1px solid ${border};opacity:.4;margin:6px 0 4px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 6px">
+        ${namesHtml}
+      </div>
+      ${moreLabel}` : '';
+
+    return `<div ${clickAttr}
+      style="position:relative;flex:1;min-width:0;background:${bg};border:2px solid ${border};border-radius:14px;padding:10px 12px;transition:transform .15s;height:200px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column"
+      onmouseenter="this.style.transform='scale(1.03)'"
+      onmouseleave="this.style.transform='scale(1)'">
+      ${countBadge}
+      <div style="text-align:center;flex-shrink:0">
+        ${stepLabel}
+        <div style="font-size:24px;line-height:1.2">${sq.icon}</div>
+        <div style="font-size:10px;font-weight:700;color:#4a7190;margin-top:2px">${(sq.label||sq.title||'').slice(0,12)}</div>
+        ${xpLabel}
+      </div>
+      <div style="flex:1;overflow:hidden">${namesSection}</div>
+    </div>`;
+  }
+
+  let rowsHtml = '';
+  for(let row = 0; row < numRows; row++){
+    const indices = [];
+    for(let col = 0; col < COLS; col++){
+      const i = row * COLS + col;
+      indices.push(i < total ? i : null);
+    }
+    if(row % 2 === 1) indices.reverse();
+
+    // カード間の矢印方向
     const arrowDir = row % 2 === 0 ? '→' : '←';
-    const rowWithArrows = rowItems.map((i, ci) => {
-      if(i === null) return `<div style="flex:1;min-width:160px;max-width:220px"></div>`;
-      const sq = allSquares[i];
-      const pieces = playerPositions[i] || [];
-      let bg = '#f0f7fc', border = '#b0d4e8';
-      if(sq.isStart){ bg='#fffbeb'; border='#d97706'; }
-      if(sq.isGoal){ bg='#fdf2f8'; border='#db2777'; }
-      if(pieces.length > 0 && !sq.isStart && !sq.isGoal){ bg='#f0fdf4'; border='#059669'; }
-      const clickAttr2 = (!sq.isStart && !sq.isGoal) ? `onclick="openMission(${sq.id})"` : '';
-      const stepLabel2 = (i > 0 && i < total-1) ? `<div style="font-size:9px;font-weight:700;color:${border};opacity:.8;margin-bottom:2px;letter-spacing:.08em">STEP ${i}</div>` : '';
-      const xpLabel2 = sq.xp ? `<div style="font-size:9px;font-weight:700;color:#d97706;margin-top:4px">+${sq.xp} XP</div>` : '';
-      const countBadge2 = pieces.length > 0
-        ? `<div style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:#1a7fbf;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff">${pieces.length}</div>`
-        : '';
-      const namesHtml2 = pieces.map(p => {
-        const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
-        return `<div style="display:flex;align-items:center;gap:5px;padding:2px 0;font-size:12px;font-weight:600;color:#0f2a3d;white-space:nowrap">
-          <span style="font-size:14px">${p.emoji}</span><span>${surname}</span></div>`;
-      }).join('');
-      const showArrow = ci < rowItems.filter(x=>x!==null).length - 1;
-      const arrowEl = showArrow ? `<div style="display:flex;align-items:center;font-size:18px;color:#b0d4e8;flex-shrink:0;padding:0 4px">${arrowDir}</div>` : '';
-      return `
-        <div style="position:relative;flex:1;min-width:160px;max-width:220px;background:${bg};border:2px solid ${border};border-radius:14px;padding:10px 12px;transition:transform .15s;cursor:${(!sq.isStart&&!sq.isGoal)?'pointer':'default'}" ${clickAttr2} onmouseenter="this.style.transform='scale(1.03)'" onmouseleave="this.style.transform='scale(1)'">
-          ${countBadge2}
-          <div style="text-align:center;margin-bottom:6px">
-            ${stepLabel2}
-            <div style="font-size:26px;line-height:1.2">${sq.icon}</div>
-            <div style="font-size:10px;font-weight:700;color:#4a7190;margin-top:2px">${(sq.label||sq.title||'').slice(0,12)}</div>
-            ${xpLabel2}
-          </div>
-          ${pieces.length > 0 ? `<div style="border-top:1px solid ${border};opacity:.5;margin:4px 0 6px"></div>` : ''}
-          <div style="display:flex;flex-direction:column;gap:1px">${namesHtml2}</div>
-        </div>
-        ${arrowEl}`;
+
+    const cellsHtml = indices.map((i, ci) => {
+      const card = i !== null ? makeCard(i) : `<div style="flex:1;min-width:0;height:200px"></div>`;
+      const filledCount = indices.filter(x => x !== null).length;
+      const showArrow = ci < filledCount - 1 && indices[ci] !== null;
+      const arrow = showArrow
+        ? `<div style="display:flex;align-items:center;flex-shrink:0;font-size:20px;color:#b0d4e8;padding:0 2px;margin-top:-90px">${arrowDir}</div>`
+        : (ci < COLS - 1 ? `<div style="width:28px;flex-shrink:0"></div>` : '');
+      return card + arrow;
     }).join('');
 
-    cardsHtml += `
-      <div style="display:flex;flex-direction:row;gap:10px;align-items:flex-start;justify-content:center;margin-bottom:0">
-        ${rowWithArrows}
+    const downArrow = row < numRows - 1
+      ? `<div style="display:flex;justify-content:${row%2===0?'flex-end':'flex-start'};padding:0 ${200/2 + 14}px;color:#b0d4e8;font-size:20px;line-height:1;margin:2px 0">↓</div>`
+      : '';
+
+    rowsHtml += `
+      <div style="display:flex;flex-direction:row;align-items:flex-start;gap:0;margin-bottom:0">
+        ${cellsHtml}
       </div>
-      ${arrowHtml}`;
+      ${downArrow}`;
   }
 
   // 進捗サマリー
@@ -2272,9 +2263,7 @@ function renderAdminRoadmap(){
   }).join('');
 
   board.innerHTML = `
-    <div style="padding:8px 0 24px">
-      ${cardsHtml}
-    </div>
+    <div style="padding:4px 0 24px">${rowsHtml}</div>
     <div class="card" style="margin-top:8px">
       <div class="card-head"><h2>📊 個人別進捗</h2></div>
       <div>${candidates.length > 0 ? summaryRows : '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">内定者がいません</div>'}</div>

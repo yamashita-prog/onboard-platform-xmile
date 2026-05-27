@@ -151,6 +151,44 @@ tbody tr:hover td{background:var(--s2)}
 .m-xp{font-size:11px;font-weight:700;color:var(--amber);font-family:'Outfit',sans-serif}
 .xp-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'Outfit',sans-serif}
 
+/* ── ROADMAP ── */
+.roadmap-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.05);overflow-x:auto}
+.roadmap-title{font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.roadmap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;min-width:500px}
+.roadmap-row{display:contents}
+.rm-cell{display:flex;justify-content:center;align-items:flex-start;padding:6px 4px;position:relative;min-height:110px}
+.rm-cell.empty{pointer-events:none}
+/* 道のライン */
+.rm-cell::before{content:'';position:absolute;background:var(--border);z-index:0}
+.rm-cell.path-right::after{content:'';position:absolute;right:-8px;top:50%;transform:translateY(-50%);width:16px;height:4px;background:var(--border2);z-index:1;border-radius:99px}
+.rm-cell.path-down::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:4px;height:16px;background:var(--border2);z-index:1;border-radius:99px}
+/* マス */
+.rm-square{position:relative;width:80px;flex-shrink:0;z-index:2;cursor:pointer;transition:transform .15s}
+.rm-square:hover{transform:scale(1.05)}
+.rm-square-inner{
+  width:80px;height:80px;border-radius:14px;
+  border:2px solid var(--border2);
+  background:var(--s2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;position:relative;overflow:hidden;
+  transition:all .2s;
+}
+.rm-square.done .rm-square-inner{background:rgba(5,150,105,.1);border-color:rgba(5,150,105,.4)}
+.rm-square.current .rm-square-inner{background:rgba(26,127,191,.1);border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,127,191,.2)}
+.rm-square.start .rm-square-inner{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-color:var(--amber)}
+.rm-square.goal .rm-square-inner{background:linear-gradient(135deg,rgba(219,39,119,.15),rgba(219,39,119,.05));border-color:var(--pink)}
+.rm-sq-icon{font-size:22px;line-height:1}
+.rm-sq-label{font-size:9px;font-weight:700;color:var(--text2);text-align:center;padding:0 4px;line-height:1.3;max-width:72px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rm-sq-xp{font-size:8px;font-weight:700;color:var(--amber);font-family:'Outfit',sans-serif}
+.rm-sq-done-badge{position:absolute;top:4px;right:4px;background:var(--green);color:#fff;font-size:8px;font-weight:700;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+/* 駒エリア */
+.rm-pieces{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:4px;min-height:22px}
+.rm-piece{font-size:18px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2));transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.rm-piece.me{animation:piecePop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes piecePop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+/* コネクタ矢印 */
+.rm-connector{position:absolute;z-index:1;display:flex;align-items:center;justify-content:center;color:var(--border2);font-size:14px;pointer-events:none}
+
 /* ── XP BAR ── */
 .xp-bar-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px 24px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.07)}
 .xp-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -615,6 +653,7 @@ tbody tr:hover td{background:var(--s2)}
     <div class="nav-item" onclick="nav('news',this)"><span class="nav-icon">📰</span><span class="nav-label">週報・お知らせ</span><span class="nav-badge red">新</span></div>
     <div class="nav-item" onclick="nav('settings',this)" id="nav-settings"><span class="nav-icon">⚙️</span><span class="nav-label">設定</span></div>
     <div class="nav-item" id="nav-offers" onclick="nav('offers',this)"><span class="nav-icon">💌</span><span class="nav-label">交流オファー</span><span class="nav-badge red" id="offer-badge" style="display:none">新</span></div>
+    <div class="nav-item" id="nav-admin-roadmap" onclick="nav('admin-roadmap',this)" style="display:none"><span class="nav-icon">🗺️</span><span class="nav-label">課題進捗マップ</span></div>
   </div>
   <div class="sidebar-section" id="nav-section-candidate">
     <div class="nav-item" id="nav-missions" onclick="nav('missions',this)"><span class="nav-icon">🎯</span><span class="nav-label">入社前ミッション</span></div>
@@ -749,6 +788,13 @@ tbody tr:hover td{background:var(--s2)}
       <span id="xp-next-lbl" style="color:var(--accent)"></span>
     </div>
   </div>
+
+  <!-- ロードマップ -->
+  <div class="roadmap-wrap">
+    <div class="roadmap-title">🗺️ みんなの現在地ロードマップ<span style="font-size:11px;font-weight:400;color:var(--text3);margin-left:4px">— 駒をクリックしてミッションを確認</span></div>
+    <div id="roadmap-board"></div>
+  </div>
+
   <div class="two-col" style="align-items:start">
     <div class="card">
       <div class="card-head"><h2>🎯 ミッション一覧</h2></div>
@@ -884,7 +930,17 @@ tbody tr:hover td{background:var(--s2)}
   <div id="offers-list"></div>
 </div>
 
-</div><!-- /main -->
+<!-- ===== ADMIN ROADMAP ===== -->
+<div class="page" id="page-admin-roadmap">
+  <div class="page-header">
+    <div class="page-eyebrow">Progress Map</div>
+    <div class="page-title">課題進捗マップ</div>
+    <div class="page-sub">全内定者のミッション進捗をリアルタイムで確認</div>
+  </div>
+  <div class="roadmap-wrap">
+    <div id="admin-roadmap-board"></div>
+  </div>
+</div>
 </div><!-- /body-wrap -->
 
 <!-- MODAL: 候補者詳細 -->
@@ -1249,6 +1305,7 @@ function setMode(m){
     document.getElementById('nav-team').style.display='flex';
     document.getElementById('nav-settings').style.display='flex';
     const offerNav=document.getElementById('nav-offers'); if(offerNav) offerNav.style.display='flex';
+    document.getElementById('nav-admin-roadmap').style.display='flex';
     document.getElementById('lbl-main').style.display='block';
     document.getElementById('sf-name').textContent='田村 さくら';
     document.getElementById('sf-role').textContent='採用担当';
@@ -1262,6 +1319,7 @@ function setMode(m){
     document.getElementById('nav-team').style.display='none';
     document.getElementById('nav-settings').style.display='none';
     const offerNavU=document.getElementById('nav-offers'); if(offerNavU) offerNavU.style.display='none';
+    document.getElementById('nav-admin-roadmap').style.display='none';
     document.getElementById('lbl-main').style.display='none';
     document.getElementById('sf-name').textContent='田中 花子';
     document.getElementById('sf-role').textContent='マーケティング部 内定者';
@@ -1298,6 +1356,7 @@ function nav(page,el){
     renderMatchStep();
   }
   if(page==='offers')  { renderOffers(); }
+  if(page==='admin-roadmap') { renderAdminRoadmap(); }
 }
 
 // ═══════════ DASHBOARD ═══════════
@@ -1855,7 +1914,367 @@ async function addNews(){
   showToast('📰 記事を追加しました');
 }
 
-// ═══════════ MISSIONS ═══════════
+// ═══════════ ROADMAP ═══════════
+function renderRoadmap(){
+  const board = document.getElementById('roadmap-board');
+  if(!board) return;
+
+  const FALLBACK_EMOJIS = ['🐶','🐱','🐭','🐹','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦋','🌸','🌟','⚡','🔥','🌈','🎯','🚀','💎','🎸','🍀'];
+
+  const allSquares = [
+    {id:'start', icon:'🏁', label:'スタート', xp:0, isStart:true},
+    ...missions,
+    {id:'goal',  icon:'🎊', label:'入社！', xp:0, isGoal:true}
+  ];
+  const total = allSquares.length;
+
+  // 各内定者の現在地計算
+  const playerPositions = {}; // index -> [{emoji, isMe, name}]
+  candidates.forEach((c, idx) => {
+    const prog = missionProgress[c.id] || {};
+    const doneCount = missions.filter(m => {
+      const p = prog[String(m.id)] || prog[Number(m.id)];
+      return p && p.done;
+    }).length;
+    const pos = doneCount >= missions.length ? total - 1 : doneCount;
+    if(!playerPositions[pos]) playerPositions[pos] = [];
+    const emoji = c.emoji || FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length];
+    const isMe = loggedInCandidate && c.id === loggedInCandidate.id;
+    playerPositions[pos].push({emoji, isMe, name: c.name});
+  });
+
+  let myPos = 0;
+  if(loggedInCandidate){
+    const prog = missionProgress[loggedInCandidate.id] || {};
+    const doneCount = missions.filter(m => {
+      const p = prog[String(m.id)] || prog[Number(m.id)];
+      return p && p.done;
+    }).length;
+    myPos = doneCount >= missions.length ? total - 1 : doneCount;
+  }
+
+  // レイアウト定数
+  const COLS = 3;           // 1行あたりのマス数
+  const SQ = 120;           // マスサイズ（大きく）
+  const MARGIN_X = 80;
+  const MARGIN_Y = 60;
+  const colW = 180;         // マス間隔
+  const rowH = 200;         // 行間隔
+  const W = MARGIN_X * 2 + colW * (COLS - 1);
+  const numRows = Math.ceil(total / COLS);
+  const SVG_H = MARGIN_Y * 2 + rowH * (numRows - 1) + SQ + 20;
+
+  // 各マスの中心座標（蛇行）
+  const coords = [];
+  for(let i = 0; i < total; i++){
+    const row = Math.floor(i / COLS);
+    const posInRow = i % COLS;
+    const col = row % 2 === 0 ? posInRow : (COLS - 1 - posInRow);
+    const x = MARGIN_X + col * colW;
+    const y = MARGIN_Y + row * rowH;
+    coords.push({x, y});
+  }
+
+  // パス生成
+  function buildPath(upTo){
+    let d = '';
+    for(let i = 0; i < upTo; i++){
+      const a = coords[i], b = coords[i+1];
+      const rowA = Math.floor(i / COLS), rowB = Math.floor((i+1) / COLS);
+      if(i === 0) d += `M ${a.x} ${a.y}`;
+      if(rowA === rowB){
+        d += ` L ${b.x} ${b.y}`;
+      } else {
+        const cx1 = a.x, cy1 = (a.y + b.y) / 2;
+        const cx2 = b.x, cy2 = (a.y + b.y) / 2;
+        d += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${b.x} ${b.y}`;
+      }
+    }
+    return d;
+  }
+  const pathD = buildPath(total - 1);
+  const donePath = myPos > 0 ? buildPath(myPos) : '';
+
+  // マスSVG生成
+  let squaresHtml = '';
+  allSquares.forEach((sq, i) => {
+    const {x, y} = coords[i];
+
+    const isDone = sq.isStart || (!sq.isGoal && loggedInCandidate && (() => {
+      const prog = missionProgress[loggedInCandidate.id] || {};
+      const p = prog[String(sq.id)] || prog[Number(sq.id)];
+      return p && p.done;
+    })());
+    const isCurrent = i === myPos;
+    const pieces = playerPositions[i] || [];
+    const clickFn = (!sq.isStart && !sq.isGoal) ? `openMission(${sq.id})` : '';
+
+    // マス色
+    let bgColor = '#f0f7fc', borderColor = '#b0d4e8', strokeW = 2;
+    if(sq.isStart)             { bgColor = '#fffbeb'; borderColor = '#d97706'; }
+    if(sq.isGoal)              { bgColor = '#fdf2f8'; borderColor = '#db2777'; }
+    if(isDone && !sq.isStart)  { bgColor = '#ecfdf5'; borderColor = '#059669'; }
+    if(isCurrent)              { bgColor = '#eff6ff'; borderColor = '#1a7fbf'; strokeW = 3; }
+
+    const glow = isCurrent ? 'filter:drop-shadow(0 0 10px rgba(26,127,191,.45))' : '';
+
+    // ✓バッジ
+    const doneBadge = (isDone && !sq.isStart)
+      ? `<circle cx="${x + SQ/2 - 8}" cy="${y - SQ/2 + 8}" r="9" fill="#059669"/>
+         <text x="${x + SQ/2 - 8}" y="${y - SQ/2 + 12}" text-anchor="middle" font-size="10" fill="white" font-weight="800">✓</text>`
+      : '';
+
+    // 「ここ！」パルスリング
+    const pulseRing = isCurrent
+      ? `<circle cx="${x}" cy="${y}" r="${SQ/2 + 6}" fill="none" stroke="#1a7fbf" stroke-width="2" opacity="0.4" stroke-dasharray="4 3"/>`
+      : '';
+
+    // 絵文字駒をマス内に格子配置（最大20個）
+    // マスの上半分：アイコン＋タイトル、下半分：駒エリア
+    const PIECE_AREA_TOP = y - SQ/2 + 54; // 駒エリアのY開始位置
+    const PIECE_AREA_H = SQ/2 - 10;       // 駒エリアの高さ
+    const visiblePieces = pieces.slice(0, 20);
+    const PIECE_COLS = 5;
+    const PIECE_SIZE = 18;
+    const PIECE_GAP = 20;
+    const totalPieceCols = Math.min(visiblePieces.length, PIECE_COLS);
+    const totalPieceRows = Math.ceil(visiblePieces.length / PIECE_COLS);
+    const pieceGridW = totalPieceCols * PIECE_GAP;
+    const pieceStartX = x - pieceGridW / 2 + PIECE_GAP / 2;
+    const pieceStartY = PIECE_AREA_TOP + (PIECE_AREA_H - totalPieceRows * PIECE_GAP) / 2 + 12;
+
+    const piecesSvg = visiblePieces.map((p, pi) => {
+      const pc = pi % PIECE_COLS;
+      const pr = Math.floor(pi / PIECE_COLS);
+      const px = pieceStartX + pc * PIECE_GAP;
+      const py = pieceStartY + pr * PIECE_GAP;
+      const meRing = p.isMe
+        ? `<circle cx="${px}" cy="${py - 6}" r="${PIECE_SIZE/2 + 3}" fill="none" stroke="#1a7fbf" stroke-width="1.5"/>`
+        : '';
+      return `${meRing}<text x="${px}" y="${py}" text-anchor="middle" font-size="${PIECE_SIZE}" style="cursor:default">${p.emoji}</text>`;
+    }).join('');
+
+    // 番号ラベル
+    const numLabel = `<text x="${x - SQ/2 + 10}" y="${y - SQ/2 + 14}" text-anchor="middle" font-size="9" font-weight="700" fill="${borderColor}" opacity="0.8">${i === 0 ? '' : i === total-1 ? '' : i}</text>`;
+
+    squaresHtml += `
+      <g style="cursor:${clickFn?'pointer':'default'};${glow}" onclick="${clickFn}">
+        ${pulseRing}
+        <rect x="${x - SQ/2}" y="${y - SQ/2}" width="${SQ}" height="${SQ}" rx="18"
+          fill="${bgColor}" stroke="${borderColor}" stroke-width="${strokeW}"/>
+        ${numLabel}
+        <!-- アイコン -->
+        <text x="${x}" y="${y - SQ/2 + 30}" text-anchor="middle" font-size="26">${sq.icon}</text>
+        <!-- タイトル -->
+        <text x="${x}" y="${y - SQ/2 + 48}" text-anchor="middle" font-size="9" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,9)}</text>
+        <!-- 仕切り線 -->
+        <line x1="${x - SQ/2 + 8}" y1="${y - SQ/2 + 54}" x2="${x + SQ/2 - 8}" y2="${y - SQ/2 + 54}" stroke="${borderColor}" stroke-width="1" opacity="0.5"/>
+        <!-- 駒エリア -->
+        ${piecesSvg}
+        ${doneBadge}
+        ${sq.xp ? `<text x="${x}" y="${y + SQ/2 - 5}" text-anchor="middle" font-size="8" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
+      </g>`;
+  });
+
+  // 凡例
+  const legend = candidates.length > 0 ? candidates.map((c, idx) => {
+    const emoji = c.emoji || FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length];
+    const isMe = loggedInCandidate && c.id === loggedInCandidate.id;
+    if(isAdmin){
+      return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--s2);border:1px solid ${isMe?'var(--accent)':'var(--border)'};border-radius:99px;padding:4px 12px;font-weight:${isMe?'700':'400'}">${emoji} ${c.name}${isMe?' <span style="color:var(--accent)">（あなた）</span>':''}</span>`;
+    } else {
+      return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;background:var(--s2);border:1px solid ${isMe?'var(--accent)':'var(--border)'};border-radius:99px;padding:4px 12px">${emoji}${isMe?' <span style="font-size:11px;color:var(--accent);font-weight:700">あなた</span>':''}</span>`;
+    }
+  }).join('') : '';
+
+  board.innerHTML = `
+    <div style="overflow-x:auto;overflow-y:visible">
+      <svg viewBox="0 0 ${W} ${SVG_H}" width="100%" style="min-width:420px;overflow:visible">
+        <defs>
+          <marker id="rm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>
+          </marker>
+          <marker id="rm-arrow-done" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#1a7fbf"/>
+          </marker>
+        </defs>
+        <!-- ベース道（太い帯） -->
+        <path d="${pathD}" fill="none" stroke="#daeef8" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${pathD}" fill="none" stroke="#c8e2f0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 5" marker-end="url(#rm-arrow)"/>
+        <!-- 完了済み道 -->
+        ${donePath ? `
+        <path d="${donePath}" fill="none" stroke="rgba(26,127,191,.2)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${donePath}" fill="none" stroke="#1a7fbf" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#rm-arrow-done)"/>` : ''}
+        <!-- マス -->
+        ${squaresHtml}
+      </svg>
+    </div>
+    ${legend ? `
+    <div style="margin-top:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">参加者</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${legend}</div>
+    </div>` : ''}
+  `;
+}
+
+
+// ═══════════ ADMIN ROADMAP ═══════════
+function renderAdminRoadmap(){
+  const board = document.getElementById('admin-roadmap-board');
+  if(!board) return;
+
+  const FALLBACK_EMOJIS = ['🐶','🐱','🐭','🐹','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐙','🦋','🌸','🌟','⚡','🔥','🌈','🎯','🚀','💎','🎸','🍀'];
+
+  const allSquares = [
+    {id:'start', icon:'🏁', label:'スタート', xp:0, isStart:true},
+    ...missions,
+    {id:'goal', icon:'🎊', label:'入社！', xp:0, isGoal:true}
+  ];
+  const total = allSquares.length;
+
+  // 各内定者の現在地（フルネーム付き）
+  const playerPositions = {};
+  candidates.forEach((c, idx) => {
+    const prog = missionProgress[c.id] || {};
+    const doneCount = missions.filter(m => {
+      const p = prog[String(m.id)] || prog[Number(m.id)];
+      return p && p.done;
+    }).length;
+    const pos = doneCount >= missions.length ? total - 1 : doneCount;
+    if(!playerPositions[pos]) playerPositions[pos] = [];
+    const emoji = c.emoji || FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length];
+    playerPositions[pos].push({emoji, name: c.name, doneCount});
+  });
+
+  // レイアウト定数（管理者用は少し大きめ）
+  const COLS = 3;
+  const SQ = 140;
+  const MARGIN_X = 90;
+  const MARGIN_Y = 70;
+  const colW = 210;
+  const rowH = 230;
+  const W = MARGIN_X * 2 + colW * (COLS - 1);
+  const numRows = Math.ceil(total / COLS);
+  const SVG_H = MARGIN_Y * 2 + rowH * (numRows - 1) + SQ + 20;
+
+  // 蛇行座標
+  const coords = [];
+  for(let i = 0; i < total; i++){
+    const row = Math.floor(i / COLS);
+    const posInRow = i % COLS;
+    const col = row % 2 === 0 ? posInRow : (COLS - 1 - posInRow);
+    coords.push({x: MARGIN_X + col * colW, y: MARGIN_Y + row * rowH});
+  }
+
+  // パス生成
+  function buildPath(upTo){
+    let d = '';
+    for(let i = 0; i < upTo; i++){
+      const a = coords[i], b = coords[i+1];
+      const rowA = Math.floor(i / COLS), rowB = Math.floor((i+1) / COLS);
+      if(i === 0) d += `M ${a.x} ${a.y}`;
+      if(rowA === rowB){
+        d += ` L ${b.x} ${b.y}`;
+      } else {
+        d += ` C ${a.x} ${(a.y+b.y)/2}, ${b.x} ${(a.y+b.y)/2}, ${b.x} ${b.y}`;
+      }
+    }
+    return d;
+  }
+  const pathD = buildPath(total - 1);
+
+  // マス生成
+  let squaresHtml = '';
+  allSquares.forEach((sq, i) => {
+    const {x, y} = coords[i];
+    const pieces = playerPositions[i] || [];
+    const clickFn = (!sq.isStart && !sq.isGoal) ? `openMission(${sq.id})` : '';
+
+    let bgColor = '#f0f7fc', borderColor = '#b0d4e8', strokeW = 2;
+    if(sq.isStart) { bgColor = '#fffbeb'; borderColor = '#d97706'; }
+    if(sq.isGoal)  { bgColor = '#fdf2f8'; borderColor = '#db2777'; }
+    if(pieces.length > 0 && !sq.isStart && !sq.isGoal) { bgColor = '#f0fdf4'; borderColor = '#059669'; }
+
+    // ✓バッジ（全員完了の場合）
+    const allDone = !sq.isStart && !sq.isGoal && candidates.length > 0 && pieces.length === 0
+      ? '' // 誰もいない＝全員通過済み
+      : '';
+
+    // 名前札（絵文字＋名前を縦に並べる、最大10人まで表示）
+    const PIECE_AREA_TOP = y - SQ/2 + 62;
+    const PIECE_GAP_Y = 22;
+    const visiblePieces = pieces.slice(0, 10);
+    const totalPieceH = visiblePieces.length * PIECE_GAP_Y;
+    const pieceStartY = PIECE_AREA_TOP + Math.max(0, (SQ - 62 - totalPieceH) / 2);
+
+    const piecesSvg = visiblePieces.map((p, pi) => {
+      const py = pieceStartY + pi * PIECE_GAP_Y + 16;
+      // 絵文字＋名前を横並びで1行に
+      return `
+        <text x="${x - SQ/2 + 14}" y="${py}" font-size="14">${p.emoji}</text>
+        <text x="${x - SQ/2 + 30}" y="${py}" font-size="10" font-weight="600" fill="#0f2a3d">${p.name.slice(0,7)}</text>`;
+    }).join('');
+
+    // 人数バッジ
+    const countBadge = pieces.length > 0
+      ? `<circle cx="${x + SQ/2 - 10}" cy="${y - SQ/2 + 10}" r="11" fill="${pieces.length>0?'#1a7fbf':'#b0d4e8'}"/>
+         <text x="${x + SQ/2 - 10}" y="${y - SQ/2 + 14}" text-anchor="middle" font-size="10" fill="white" font-weight="800">${pieces.length}</text>`
+      : '';
+
+    squaresHtml += `
+      <g style="cursor:${clickFn?'pointer':'default'}" onclick="${clickFn}">
+        <rect x="${x - SQ/2}" y="${y - SQ/2}" width="${SQ}" height="${SQ}" rx="18"
+          fill="${bgColor}" stroke="${borderColor}" stroke-width="${strokeW}"/>
+        <text x="${x}" y="${y - SQ/2 + 22}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
+        <text x="${x}" y="${y - SQ/2 + 40}" text-anchor="middle" font-size="24">${sq.icon}</text>
+        <text x="${x}" y="${y - SQ/2 + 56}" text-anchor="middle" font-size="9" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,10)}</text>
+        <line x1="${x-SQ/2+8}" y1="${y-SQ/2+62}" x2="${x+SQ/2-8}" y2="${y-SQ/2+62}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
+        ${piecesSvg}
+        ${countBadge}
+        ${sq.xp ? `<text x="${x}" y="${y+SQ/2-5}" text-anchor="middle" font-size="8" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
+      </g>`;
+  });
+
+  // 進捗サマリー
+  const summaryRows = candidates.map((c, idx) => {
+    const prog = missionProgress[c.id] || {};
+    const doneCount = missions.filter(m => {
+      const p = prog[String(m.id)] || prog[Number(m.id)];
+      return p && p.done;
+    }).length;
+    const pct = missions.length > 0 ? Math.round(doneCount / missions.length * 100) : 0;
+    const emoji = c.emoji || FALLBACK_EMOJIS[idx % FALLBACK_EMOJIS.length];
+    const statusColor = pct === 100 ? '#059669' : pct >= 50 ? '#1a7fbf' : '#d97706';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
+      <span style="font-size:20px">${emoji}</span>
+      <span style="font-size:13px;font-weight:600;min-width:100px">${c.name}</span>
+      <div style="flex:1;height:8px;background:var(--s3);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${statusColor};border-radius:99px;transition:width .6s"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${statusColor};min-width:60px;text-align:right">${doneCount} / ${missions.length} 完了</span>
+    </div>`;
+  }).join('');
+
+  board.innerHTML = `
+    <div style="overflow-x:auto;overflow-y:visible;margin-bottom:24px">
+      <svg viewBox="0 0 ${W} ${SVG_H}" width="100%" style="min-width:420px;overflow:visible">
+        <defs>
+          <marker id="adm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>
+          </marker>
+        </defs>
+        <path d="${pathD}" fill="none" stroke="#daeef8" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${pathD}" fill="none" stroke="#c8e2f0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 5" marker-end="url(#adm-arrow)"/>
+        ${squaresHtml}
+      </svg>
+    </div>
+    <div class="card" style="margin-top:8px">
+      <div class="card-head"><h2>📊 個人別進捗</h2></div>
+      <div>${candidates.length > 0 ? summaryRows : '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">内定者がいません</div>'}</div>
+    </div>
+  `;
+}
+
 function getLevel(x){
   // xが各レベルのmax未満の最初のレベルを返す
   for(let i=0;i<LEVELS.length;i++){
@@ -1869,6 +2288,7 @@ function getLevelPrevMax(lv){
 }
 
 function renderMissions(){
+  renderRoadmap();
   const lv=getLevel(xp);
   // prevMax: 現レベルの開始XP（Lv1は0）
   const prevMax = getLevelPrevMax(lv);
@@ -3276,6 +3696,7 @@ function loginSuccess(candidate){
   document.getElementById('mode-admin').style.display='none';
   document.getElementById('mode-user').style.display='none';
   const offerNavLogin=document.getElementById('nav-offers'); if(offerNavLogin) offerNavLogin.style.display='none';
+  document.getElementById('nav-admin-roadmap').style.display='none';
   document.getElementById('nav-section-candidate').style.display='block';
   document.getElementById('sf-name').textContent = candidate.name;
   document.getElementById('sf-role').textContent = (candidate.dept||'') + ' 内定者';
@@ -3400,6 +3821,7 @@ function doLogout(){
   document.getElementById('mode-admin').style.display='';
   document.getElementById('mode-user').style.display='';
   document.getElementById('nav-section-candidate').style.display='none';
+  document.getElementById('nav-admin-roadmap').style.display='none';
 }
 
 function goAdminMode(){
@@ -3417,6 +3839,7 @@ function goAdminMode(){
   document.getElementById('add-news-btn').style.display='inline-flex';
   const offerNavAdmin=document.getElementById('nav-offers'); if(offerNavAdmin) offerNavAdmin.style.display='flex';
   document.getElementById('nav-section-candidate').style.display='none';
+  document.getElementById('nav-admin-roadmap').style.display='flex';
   document.getElementById('sf-name').textContent='田村 さくら';
   document.getElementById('sf-role').textContent='採用担当';
   document.getElementById('sf-av').textContent='田';

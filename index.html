@@ -2146,25 +2146,45 @@ function renderAdminRoadmap(){
     playerPositions[pos].push({emoji, name: c.name, doneCount});
   });
 
-  // レイアウト定数（管理者用は少し大きめ）
+  // レイアウト定数（マス高さを人数に応じて動的計算）
   const COLS = 3;
-  const SQ = 180;
-  const MARGIN_X = 110;
-  const MARGIN_Y = 90;
-  const colW = 260;
-  const rowH = 280;
-  const W = MARGIN_X * 2 + colW * (COLS - 1);
-  const numRows = Math.ceil(total / COLS);
-  const SVG_H = MARGIN_Y * 2 + rowH * (numRows - 1) + SQ + 20;
-
-  // 蛇行座標
-  const coords = [];
-  for(let i = 0; i < total; i++){
-    const row = Math.floor(i / COLS);
-    const posInRow = i % COLS;
-    const col = row % 2 === 0 ? posInRow : (COLS - 1 - posInRow);
-    coords.push({x: MARGIN_X + col * colW, y: MARGIN_Y + row * rowH});
+  const SQ_W = 180;
+  const HEADER_H = 82;
+  const PIECE_GAP_Y = 22;
+  const FOOTER_H = 20;
+  const PADDING_V = 14;
+  function sqH(idx2) {
+    const count = (playerPositions[idx2] || []).length;
+    const bodyH = Math.max(count, 1) * PIECE_GAP_Y + 6;
+    return HEADER_H + bodyH + FOOTER_H + PADDING_V;
   }
+  const MARGIN_X = 110;
+  const MARGIN_Y = 60;
+  const colW = 260;
+  const numRows = Math.ceil(total / COLS);
+  function rowMaxH(row) {
+    let max = 0;
+    for(let c = 0; c < COLS; c++){
+      const i2 = row * COLS + c;
+      if(i2 < total) max = Math.max(max, sqH(i2));
+    }
+    return max + 60;
+  }
+  const rowTopY = [MARGIN_Y];
+  for(let r = 1; r < numRows; r++) rowTopY.push(rowTopY[r-1] + rowMaxH(r-1));
+  function coordOf(i2) {
+    const row = Math.floor(i2 / COLS);
+    const posInRow = i2 % COLS;
+    const col = row % 2 === 0 ? posInRow : (COLS - 1 - posInRow);
+    const h = sqH(i2);
+    return {x: MARGIN_X + col * colW, y: rowTopY[row] + h/2};
+  }
+  const W = MARGIN_X * 2 + colW * (COLS - 1);
+  const SVG_H = rowTopY[numRows-1] + rowMaxH(numRows-1) + MARGIN_Y;
+
+  // 蛇行座標（coordOf関数を使用）
+  const coords = [];
+  for(let i = 0; i < total; i++) coords.push(coordOf(i));
 
   // パス生成
   function buildPath(upTo){
@@ -2183,10 +2203,11 @@ function renderAdminRoadmap(){
   }
   const pathD = buildPath(total - 1);
 
-  // マス生成
+  // マス生成（高さ動的）
   let squaresHtml = '';
   allSquares.forEach((sq, i) => {
     const {x, y} = coords[i];
+    const SQ_H = sqH(i);   // 高さ：人数に応じた動的値
     const pieces = playerPositions[i] || [];
     const clickFn = (!sq.isStart && !sq.isGoal) ? `openMission(${sq.id})` : '';
 
@@ -2195,46 +2216,38 @@ function renderAdminRoadmap(){
     if(sq.isGoal)  { bgColor = '#fdf2f8'; borderColor = '#db2777'; }
     if(pieces.length > 0 && !sq.isStart && !sq.isGoal) { bgColor = '#f0fdf4'; borderColor = '#059669'; }
 
-    // ✓バッジ（全員完了の場合）
-    const allDone = !sq.isStart && !sq.isGoal && candidates.length > 0 && pieces.length === 0
-      ? '' // 誰もいない＝全員通過済み
-      : '';
-
-    // 名前札（絵文字＋苗字を縦に並べる、最大10人まで表示）
-    const PIECE_AREA_TOP = y - SQ/2 + 78;
-    const PIECE_GAP_Y = 24;
-    const visiblePieces = pieces.slice(0, 10);
-    const totalPieceH = visiblePieces.length * PIECE_GAP_Y;
-    const pieceStartY = PIECE_AREA_TOP + Math.max(0, (SQ - 78 - totalPieceH) / 2);
+    // 名前札（絵文字＋苗字を縦に並べる）
+    const visiblePieces = pieces.slice(0, 20);
+    const pieceStartY = y - SQ_H/2 + HEADER_H;
 
     const piecesSvg = visiblePieces.map((p, pi) => {
       const py = pieceStartY + pi * PIECE_GAP_Y + 16;
-      const surname = p.name ? p.name.split(/[\s　]/)[0] : p.name; // 苗字のみ
-      // 絵文字＋苗字を横並びで1行に
+      const surname = p.name ? p.name.split(/[\s\u3000]/)[0] : p.name;
       return `
-        <text x="${x - SQ/2 + 16}" y="${py}" font-size="15">${p.emoji}</text>
-        <text x="${x - SQ/2 + 36}" y="${py}" font-size="11" font-weight="600" fill="#0f2a3d">${surname.slice(0,5)}</text>`;
+        <text x="${x - SQ_W/2 + 16}" y="${py}" font-size="15">${p.emoji}</text>
+        <text x="${x - SQ_W/2 + 36}" y="${py}" font-size="11" font-weight="600" fill="#0f2a3d">${surname.slice(0,5)}</text>`;
     }).join('');
 
     // 人数バッジ
     const countBadge = pieces.length > 0
-      ? `<circle cx="${x + SQ/2 - 10}" cy="${y - SQ/2 + 10}" r="11" fill="${pieces.length>0?'#1a7fbf':'#b0d4e8'}"/>
-         <text x="${x + SQ/2 - 10}" y="${y - SQ/2 + 14}" text-anchor="middle" font-size="10" fill="white" font-weight="800">${pieces.length}</text>`
+      ? `<circle cx="${x + SQ_W/2 - 12}" cy="${y - SQ_H/2 + 12}" r="11" fill="#1a7fbf"/>
+         <text x="${x + SQ_W/2 - 12}" y="${y - SQ_H/2 + 16}" text-anchor="middle" font-size="10" fill="white" font-weight="800">${pieces.length}</text>`
       : '';
 
     squaresHtml += `
       <g style="cursor:${clickFn?'pointer':'default'}" onclick="${clickFn}">
-        <rect x="${x - SQ/2}" y="${y - SQ/2}" width="${SQ}" height="${SQ}" rx="20"
+        <rect x="${x - SQ_W/2}" y="${y - SQ_H/2}" width="${SQ_W}" height="${SQ_H}" rx="16"
           fill="${bgColor}" stroke="${borderColor}" stroke-width="${strokeW}"/>
-        <text x="${x}" y="${y - SQ/2 + 24}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
-        <text x="${x}" y="${y - SQ/2 + 50}" text-anchor="middle" font-size="26">${sq.icon}</text>
-        <text x="${x}" y="${y - SQ/2 + 68}" text-anchor="middle" font-size="10" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,12)}</text>
-        <line x1="${x-SQ/2+10}" y1="${y-SQ/2+78}" x2="${x+SQ/2-10}" y2="${y-SQ/2+78}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
+        <text x="${x}" y="${y - SQ_H/2 + 22}" text-anchor="middle" font-size="10" font-weight="700" fill="${borderColor}" opacity="0.7">${i === 0 || i === total-1 ? '' : `STEP ${i}`}</text>
+        <text x="${x}" y="${y - SQ_H/2 + 46}" text-anchor="middle" font-size="26">${sq.icon}</text>
+        <text x="${x}" y="${y - SQ_H/2 + 64}" text-anchor="middle" font-size="10" font-weight="700" fill="#4a7190">${(sq.label||sq.title||'').slice(0,12)}</text>
+        <line x1="${x-SQ_W/2+10}" y1="${y-SQ_H/2+76}" x2="${x+SQ_W/2-10}" y2="${y-SQ_H/2+76}" stroke="${borderColor}" stroke-width="1" opacity="0.4"/>
         ${piecesSvg}
         ${countBadge}
-        ${sq.xp ? `<text x="${x}" y="${y+SQ/2-6}" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
+        ${sq.xp ? `<text x="${x}" y="${y+SQ_H/2-6}" text-anchor="middle" font-size="9" font-weight="700" fill="#d97706">+${sq.xp} XP</text>` : ''}
       </g>`;
   });
+
 
   // 進捗サマリー
   const summaryRows = candidates.map((c, idx) => {

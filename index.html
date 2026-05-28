@@ -2572,52 +2572,69 @@ function openMission(id){
   const m=missions.find(x=>x.id===id);
   let submitArea='';
   if(m.done){
-    submitArea=`<div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.25);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:16px">
-      <span style="font-size:20px">${m.stamp}</span>
-      <div><div style="font-size:13px;font-weight:600;color:var(--green)">提出済み・完了</div>
-      ${m.submittedFile?`<div style="font-size:11px;color:var(--text2);margin-top:2px">📎 ${m.submittedFile}</div>`:''}
-      </div></div>
+    submitArea=`
+      <div style="background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.25);border-radius:10px;padding:16px;display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <span style="font-size:24px">✅</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--green)">提出済み・完了</div>
+          ${m.submittedFile?`<div style="font-size:11px;color:var(--text2);margin-top:3px">📎 ${m.submittedFile}</div>`:''}
+          ${m.submittedFileUrl?`<a href="${m.submittedFileUrl}" target="_blank" style="font-size:11px;color:var(--accent);display:inline-flex;align-items:center;gap:3px;margin-top:4px">🔗 提出ファイルを確認</a>`:''}
+        </div>
+      </div>
       <button class="btn btn-ghost" style="width:100%" disabled>✅ 完了済み</button>`;
-  } else if(m.submitType==='doc'){
+  } else {
+    const isImage = m.submitType==='image';
+    const isCheck = m.submitType==='check';
+    const accept = isImage ? 'image/*' : '.pdf,.doc,.docx,.txt,.xlsx,.pptx,image/*';
+    const dropIcon = isImage ? '🖼️' : '📄';
+    const dropHint = isImage ? 'スクリーンショットや写真をアップロード' : 'ファイルをアップロードして提出';
+    const dropLabel = isImage ? 'PNG / JPG / GIF' : 'PDF / Word / Excel / 画像など';
+    const checkNote = isCheck ? `
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.7">
+        📌 参加後、証拠写真やレポートがあれば添付してください。ファイルなしでも完了報告できます。
+      </div>` : '';
     submitArea=`
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📎 ファイルを提出</div>
-      <div id="drop-zone-${m.id}" style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;margin-bottom:12px;cursor:pointer;transition:all .2s;background:var(--s2)" onclick="document.getElementById('file-input-${m.id}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="handleDrop(event,${m.id})">
-        <div style="font-size:28px;margin-bottom:8px">📄</div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">PDFまたはドキュメントをアップロード</div>
-        <div style="font-size:11px;color:var(--text2)">クリックまたはドラッグ＆ドロップ</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:4px">PDF, Word (.docx), テキスト対応</div>
+      ${checkNote}
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">
+        ${isImage?'📸 スクリーンショットを添付':'📎 ファイルを添付'}
+        <span style="font-weight:400;color:var(--text3)">${isCheck?' （任意）':''}</span>
       </div>
-      <input type="file" id="file-input-${m.id}" accept=".pdf,.doc,.docx,.txt" style="display:none" onchange="handleFileSelect(event,${m.id})">
-      <div id="file-preview-${m.id}" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px">
-        <span style="font-size:18px">📄</span>
-        <span id="file-name-${m.id}" style="font-size:13px;flex:1"></span>
-        <span onclick="clearFile(${m.id})" style="cursor:pointer;color:var(--text3);font-size:14px">✕</span>
+      <div id="drop-zone-${m.id}"
+        style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;margin-bottom:12px;cursor:pointer;transition:all .2s;background:var(--s2)"
+        onclick="document.getElementById('file-input-${m.id}').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(26,127,191,.05)'"
+        ondragleave="this.style.borderColor='var(--border2)';this.style.background='var(--s2)'"
+        ondrop="handleDrop(event,${m.id})">
+        <div style="font-size:28px;margin-bottom:8px">${dropIcon}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">${dropHint}</div>
+        <div style="font-size:11px;color:var(--text3)">${dropLabel}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">クリックまたはドラッグ＆ドロップ</div>
       </div>
-      <button id="submit-btn-${m.id}" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;opacity:.4" disabled onclick="completeMission(${m.id})">提出する →</button>`;
-  } else if(m.submitType==='image'){
-    submitArea=`
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📸 スクリーンショットを添付</div>
-      <div id="drop-zone-${m.id}" style="border:2px dashed var(--border2);border-radius:10px;padding:28px;text-align:center;margin-bottom:12px;cursor:pointer;transition:all .2s;background:var(--s2)" onclick="document.getElementById('file-input-${m.id}').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border2)'" ondrop="handleDrop(event,${m.id})">
-        <div style="font-size:28px;margin-bottom:8px">🖼️</div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">画像をアップロード</div>
-        <div style="font-size:11px;color:var(--text2)">クリックまたはドラッグ＆ドロップ</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:4px">PNG, JPG, GIF 対応</div>
-      </div>
-      <input type="file" id="file-input-${m.id}" accept="image/*" style="display:none" onchange="handleFileSelect(event,${m.id})">
-      <div id="file-preview-${m.id}" style="display:none;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
+      <input type="file" id="file-input-${m.id}" accept="${accept}" style="display:none" onchange="handleFileSelect(event,${m.id})">
+      <div id="file-preview-img-${m.id}" style="display:none;margin-bottom:12px;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
         <img id="img-preview-${m.id}" style="width:100%;max-height:200px;object-fit:contain;background:var(--s2)">
         <div style="padding:8px 12px;display:flex;align-items:center;justify-content:space-between;background:var(--s2)">
           <span id="file-name-${m.id}" style="font-size:12px;color:var(--text2)"></span>
           <span onclick="clearFile(${m.id})" style="cursor:pointer;color:var(--text3);font-size:13px">✕ 削除</span>
         </div>
       </div>
-      <button id="submit-btn-${m.id}" class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;opacity:.4" disabled onclick="completeMission(${m.id})">提出する →</button>`;
-  } else if(m.submitType==='check'){
-    submitArea=`
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text2);line-height:1.7">
-        📌 座談会の日程は担当リクルーターと調整してください。参加完了後、下のボタンで完了報告をしてください。
+      <div id="file-preview-${m.id}" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:10px">
+        <span style="font-size:18px">📄</span>
+        <span id="file-name-${m.id}" style="font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <span onclick="clearFile(${m.id})" style="cursor:pointer;color:var(--text3);font-size:14px;flex-shrink:0">✕</span>
       </div>
-      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="completeMission(${m.id})">参加完了を報告する ${m.stamp}</button>`;
+      <div id="upload-progress-${m.id}" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:4px">アップロード中...</div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div id="upload-bar-${m.id}" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+      <button id="submit-btn-${m.id}" class="btn btn-primary"
+        style="width:100%;padding:12px;font-size:14px;${isCheck?'':'opacity:.4'}"
+        ${isCheck?'':'disabled'}
+        onclick="completeMission(${m.id})">
+        ${isCheck?'✋ 参加完了を報告する':'📤 提出する →'}
+      </button>`;
   }
 
   document.getElementById('mission-modal-body').innerHTML=`
@@ -2647,48 +2664,106 @@ function handleDrop(event,id){
   event.preventDefault();
   const file=event.dataTransfer.files[0];
   if(!file) return;
-  document.getElementById('drop-zone-'+id).style.borderColor='var(--border2)';
+  const dz=document.getElementById('drop-zone-'+id);
+  if(dz){dz.style.borderColor='var(--border2)';dz.style.background='var(--s2)';}
   showFilePreview(id,file);
 }
 function showFilePreview(id,file){
   const m=missions.find(x=>x.id===id);
-  const preview=document.getElementById('file-preview-'+id);
-  const nameEl=document.getElementById('file-name-'+id);
   const btn=document.getElementById('submit-btn-'+id);
-  if(nameEl) nameEl.textContent=file.name;
-  if(preview){
-    preview.style.display='flex';
-    if(m.submitType==='image'){
-      preview.style.display='block';
-      const img=document.getElementById('img-preview-'+id);
-      if(img){const reader=new FileReader();reader.onload=e=>img.src=e.target.result;reader.readAsDataURL(file);}
-    }
+  const isImg = file.type.startsWith('image/');
+  // 画像プレビュー
+  const previewImg=document.getElementById('file-preview-img-'+id);
+  const previewFile=document.getElementById('file-preview-'+id);
+  if(isImg && previewImg){
+    previewImg.style.display='block';
+    if(previewFile) previewFile.style.display='none';
+    const img=document.getElementById('img-preview-'+id);
+    if(img){const reader=new FileReader();reader.onload=e=>img.src=e.target.result;reader.readAsDataURL(file);}
+  } else if(previewFile){
+    previewFile.style.display='flex';
+    if(previewImg) previewImg.style.display='none';
   }
+  // ファイル名表示（両方のfile-nameに設定）
+  document.querySelectorAll('#file-name-'+id).forEach(el=>el.textContent=file.name);
   if(btn){btn.disabled=false;btn.style.opacity='1';}
   m._pendingFile=file.name;
+  m._pendingFileObj=file; // 実ファイルを保持
 }
 function clearFile(id){
   const m=missions.find(x=>x.id===id);
-  const preview=document.getElementById('file-preview-'+id);
+  const previewImg=document.getElementById('file-preview-img-'+id);
+  const previewFile=document.getElementById('file-preview-'+id);
   const btn=document.getElementById('submit-btn-'+id);
   const input=document.getElementById('file-input-'+id);
-  if(preview) preview.style.display='none';
-  if(btn){btn.disabled=true;btn.style.opacity='.4';}
+  if(previewImg) previewImg.style.display='none';
+  if(previewFile) previewFile.style.display='none';
+  const isCheck = m.submitType==='check';
+  if(btn){btn.disabled=!isCheck;btn.style.opacity=isCheck?'1':'.4';}
   if(input) input.value='';
   m._pendingFile=null;
+  m._pendingFileObj=null;
 }
+async function uploadMissionFile(candidateId, missionId, file){
+  // Supabase Storage へアップロード（バケット名: mission-files）
+  const ext = file.name.split('.').pop();
+  const path = `${candidateId}/${missionId}_${Date.now()}.${ext}`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/mission-files/${path}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': file.type || 'application/octet-stream',
+        'x-upsert': 'true',
+      },
+      body: file,
+    });
+    if(!res.ok){ console.warn('[Storage] upload failed', res.status, await res.text()); return null; }
+    // 公開URLを返す
+    return `${SUPABASE_URL}/storage/v1/object/public/mission-files/${path}`;
+  } catch(e){ console.warn('[Storage] upload error', e); return null; }
+}
+
 async function completeMission(id){
   const m=missions.find(x=>x.id===id);
   if(!m||m.done) return;
+  // doc / image タイプはファイル必須（check は任意）
   if((m.submitType==='doc'||m.submitType==='image')&&!m._pendingFile) return;
+
+  // ── ファイルアップロード ──
+  let fileUrl = null;
+  const btn = document.getElementById('submit-btn-'+id);
+  const progress = document.getElementById('upload-progress-'+id);
+  const bar = document.getElementById('upload-bar-'+id);
+  if(m._pendingFileObj && loggedInCandidate){
+    if(btn){ btn.disabled=true; btn.textContent='アップロード中...'; }
+    if(progress) progress.style.display='block';
+    // プログレスバーアニメーション
+    let pct=0;
+    const timer = setInterval(()=>{ pct=Math.min(pct+8,90); if(bar) bar.style.width=pct+'%'; },200);
+    fileUrl = await uploadMissionFile(loggedInCandidate.id, m.id, m._pendingFileObj);
+    clearInterval(timer);
+    if(bar) bar.style.width='100%';
+    setTimeout(()=>{ if(progress) progress.style.display='none'; },400);
+  }
+
   m.done=true;
   m.submittedFile=m._pendingFile||null;
+  m.submittedFileUrl=fileUrl||null;
   m._completedDate=new Date().toDateString();
   xp += Number(m.xp)||0;
   if(loggedInCandidate){
     if(!missionProgress[loggedInCandidate.id]) missionProgress[loggedInCandidate.id]={};
     missionProgress[loggedInCandidate.id][m.id]={done:true, submittedFile:m.submittedFile, xp:Number(m.xp)||0};
-    await dbUpsert('missions',{candidate_id:loggedInCandidate.id, mission_id:m.id, done:true, submitted_file:m.submittedFile||null, xp:m.xp});
+    await dbUpsert('missions',{
+      candidate_id:loggedInCandidate.id,
+      mission_id:m.id,
+      done:true,
+      submitted_file:m.submittedFile||null,
+      submitted_file_url:fileUrl||null,
+      xp:m.xp
+    });
   }
   closeMissionModal();
   // バッジ判定

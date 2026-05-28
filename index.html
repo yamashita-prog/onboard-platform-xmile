@@ -1241,7 +1241,7 @@ function slotsFor(d){const dow=d.getDay();if(!dow||dow===6)return[];const base=[
 // ═══════════ SUPABASE ═══════════
 const SUPABASE_URL = 'https://yfhmqqqbaolnigxyvuud.supabase.co';
 // Resend APIキー（フロントエンドからの送信用・要変更）
-const RESEND_API_KEY_CLIENT = 'YOUR_RESEND_API_KEY_HERE';
+const RESEND_API_KEY_CLIENT = 're_XG8fzttF_AJuBHsgBqgfU9whEQCbUVE1M';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmaG1xcXFiYW9sbmlneHl2dXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMTgxNjAsImV4cCI6MjA5Mzg5NDE2MH0.LWwHJhHuws091bKTP1Y7u-nQJ6JlmmdmEfwqRab-rgU';
 
 
@@ -1289,13 +1289,7 @@ async function dbUpsert(table, data){
   // DELETE → INSERT で確実に保存（upsert代わり）
   const items = Array.isArray(data) ? data : [data];
   try {
-    for(let item of items){
-      // candidatesテーブルはcamelCaseキーを除外してsnake_caseのみ送る
-      if(table === 'candidates'){
-        const {recruiterId, submittedFile, submittedFileUrl, _pendingFile, _pendingFileObj, _completedDate, ...rest} = item;
-        item = {...rest, recruiter_id: item.recruiter_id || recruiterId || null};
-        if(typeof item.docs !== 'string') item.docs = JSON.stringify(item.docs||[]);
-      }
+    for(const item of items){
       if(item.id !== undefined && item.id !== null){
         // まず既存行を削除
         await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(item.id)}`, {
@@ -1357,10 +1351,10 @@ async function loadAll(){
     if(Array.isArray(r) && r.length > 0) recruiters = r;
     if(Array.isArray(c)){
       if(c.length > 0){
+        // docsフィールドが文字列で来る場合はパース
         candidates = c.map(cand => ({
           ...cand,
-          docs: typeof cand.docs === 'string' ? JSON.parse(cand.docs) : (cand.docs || []),
-          recruiterId: cand.recruiter_id || cand.recruiterId || null
+          docs: typeof cand.docs === 'string' ? JSON.parse(cand.docs) : (cand.docs || [])
         }));
       }
     }
@@ -1596,30 +1590,15 @@ function schedCard(s){
 function renderCandidates(){
   document.getElementById('cand-table').innerHTML=candidates.map(c=>{
     const rec = recruiters.find(r=>r.id===c.recruiterId);
-    const recCell = rec
-      ? `<div style="display:flex;align-items:center;gap:8px">
-          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">${rec.av}</div>
-          <div>
-            <div style="font-size:12px;font-weight:600">${rec.name}</div>
-            <div style="font-size:10px;color:var(--text3)">${rec.role||''}</div>
-          </div>
-        </div>`
-      : `<div style="display:flex;align-items:center;gap:6px">
-          <div style="width:28px;height:28px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">👤</div>
-          <div>
-            <div style="font-size:12px;font-weight:600;color:var(--red)">未割り当て</div>
-            <div style="font-size:10px;color:var(--text3)">要設定</div>
-          </div>
-        </div>`;
     return `<tr onclick="openCand(${c.id})">
       <td><strong>${c.name}</strong><br><span style="font-size:11px;color:var(--text3)">${c.email}</span></td>
       <td style="color:var(--text2)">${c.univ}</td>
       <td style="color:var(--text2)">${c.dept}</td>
-      <td>${recCell}</td>
+      <td style="color:var(--text2)">${rec ? rec.av+' '+rec.name : '<span style="color:var(--text3)">未割り当て</span>'}</td>
       <td><div style="display:flex;align-items:center;gap:8px"><div class="prog-wrap"><div class="prog-bar" style="width:${c.progress}%"></div></div><span style="font-size:11px;color:var(--text2)">${c.progress}%</span></div></td>
       <td><span class="status s-${c.status}">${c.status==='done'?'完了':c.status==='pend'?'進行中':'要対応'}</span></td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openAssignRecruiter(${c.id})" style="${!rec?'background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.2);color:var(--red)':''}">👤 担当${rec?'変更':'設定'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openAssignRecruiter(${c.id})">👤 担当変更</button>
         <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="event.stopPropagation();deleteCandidate(${c.id})">削除</button>
       </td>
     </tr>`;
@@ -1755,7 +1734,7 @@ async function toggleDoc(cid,idx){
   if(c.docs[idx].done) c.docs[idx].date='今日';
   c.progress=Math.round(c.docs.filter(d=>d.done).length/c.docs.length*100);
   c.status=c.progress===100?'done':c.progress===0?'risk':'pend';
-  await dbUpsert('candidates', {...c, docs: c.docs, recruiter_id: c.recruiterId||null});
+  await dbUpsert('candidates', {...c, docs: c.docs});
   openCand(cid);
   renderCandidates();
   renderDashboard();
@@ -1783,14 +1762,11 @@ async function addCandidate(){
   if(!name) return;
   const recruiterId = document.getElementById('ac-recruiter').value || null;
   const defaultEmoji = assignDefaultEmoji();
-  const newCandLocal = {id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',recruiterId,emoji:defaultEmoji,progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]};
-  candidates.push(newCandLocal);
+  candidates.push({id:Date.now(),name,univ:document.getElementById('ac-univ').value||'',dept:document.getElementById('ac-dept').value||'',email:document.getElementById('ac-email').value||'',recruiterId,emoji:defaultEmoji,progress:0,status:'risk',docs:[{n:'住民票',done:false,date:'-'},{n:'卒業見込証明書',done:false,date:'-'},{n:'健康診断書',done:false,date:'-'},{n:'誓約書',done:false,date:'-'}]});
   ['ac-name','ac-univ','ac-dept','ac-email'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('ac-recruiter').value='';
   closeAddCandModal();
-  // Supabaseには recruiter_id（snake_case）で送る
-  const newCandDb = {id:newCandLocal.id,name:newCandLocal.name,univ:newCandLocal.univ,dept:newCandLocal.dept,email:newCandLocal.email,recruiter_id:recruiterId||null,emoji:newCandLocal.emoji,progress:0,status:'risk',docs:JSON.stringify(newCandLocal.docs)};
-  await dbInsert('candidates', newCandDb);
+  await dbInsert('candidates', candidates[candidates.length-1]);
   // Supabaseから再取得して同期
   try {
     const c2 = await dbFetch('candidates');
@@ -3245,9 +3221,8 @@ async function saveAssignRecruiter(){
   const c = candidates.find(x=>x.id===assigningCandId);
   if(!c) return;
   c.recruiterId = assigningRecId || null;
-  c.recruiter_id = assigningRecId || null;
   closeAssignRecruiter();
-  await dbUpsert('candidates', {...c, docs:c.docs, recruiter_id: c.recruiterId||null});
+  await dbUpsert('candidates', {...c, docs:c.docs});
   renderCandidates();
   const rec = recruiters.find(r=>r.id===assigningRecId);
   showToast(rec ? `✅ 担当者を ${rec.av}${rec.name} に設定しました` : '✅ 担当者を外しました');

@@ -1240,6 +1240,8 @@ function slotsFor(d){const dow=d.getDay();if(!dow||dow===6)return[];const base=[
 
 // ═══════════ SUPABASE ═══════════
 const SUPABASE_URL = 'https://yfhmqqqbaolnigxyvuud.supabase.co';
+// Resend APIキー（フロントエンドからの送信用・要変更）
+const RESEND_API_KEY_CLIENT = 're_XG8fzttF_AJuBHsgBqgfU9whEQCbUVE1M';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmaG1xcXFiYW9sbmlneHl2dXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMTgxNjAsImV4cCI6MjA5Mzg5NDE2MH0.LWwHJhHuws091bKTP1Y7u-nQJ6JlmmdmEfwqRab-rgU';
 
 
@@ -2865,6 +2867,44 @@ async function completeMission(id){
     });
   }
   closeMissionModal();
+
+  // ── 担当リクルーターへメール通知 ──
+  (async () => {
+    try {
+      if(!loggedInCandidate) return;
+      const recruiter = recruiters.find(r => r.id === loggedInCandidate.recruiterId);
+      if(!recruiter?.email) return;
+      const fileInfo = m.submittedFile ? `<br>📎 提出ファイル：${m.submittedFile}` : '';
+      const fileLink = m.submittedFileUrl ? `<br><a href="${m.submittedFileUrl}" style="color:#1a7fbf">🔗 ファイルを確認する</a>` : '';
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY_CLIENT}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'Onboard <onboarding@resend.dev>',
+          to: recruiter.email,
+          subject: `【Onboard】${loggedInCandidate.name}さんが「${m.title}」を提出しました`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f0f7fc;border-radius:12px">
+              <h2 style="color:#1a7fbf">📬 ミッション提出通知</h2>
+              <p style="color:#0f2a3d">${recruiter.name} さん、担当候補者から提出がありました。</p>
+              <div style="background:#fff;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #1a7fbf">
+                <div style="font-size:12px;color:#4a7190;margin-bottom:4px">内定者</div>
+                <div style="font-weight:700;font-size:16px;margin-bottom:8px">${loggedInCandidate.name}（${loggedInCandidate.dept||''}）</div>
+                <div style="font-size:12px;color:#4a7190;margin-bottom:4px">提出ミッション</div>
+                <div style="font-weight:700;font-size:15px">${m.icon} ${m.title}</div>
+                ${fileInfo}${fileLink}
+              </div>
+              <a href="https://yamashita-prog.github.io/onboard-platform-xmile/" style="display:inline-block;background:#1a7fbf;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Onboardで確認する →</a>
+            </div>
+          `,
+        }),
+      });
+    } catch(e) { console.warn('recruiter notify error', e); }
+  })();
+
   // バッジ判定
   const newBadges = checkBadges();
   renderMissions();

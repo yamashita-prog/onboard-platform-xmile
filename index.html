@@ -2695,12 +2695,38 @@ async function completeMission(id){
   const newBadges = checkBadges();
   renderMissions();
   showToast(`🎉 提出完了！ +${m.xp} XP`);
+
+  // ── ブラウザプッシュ通知 ──
+  (async () => {
+    const granted = await requestNotifPermission();
+    if (granted) {
+      await sendPushNotif({
+        title: `🎯 ミッション完了！ +${m.xp} XP`,
+        body: `「${m.title}」を提出しました。お疲れさまです！`,
+        tag: `mission-${m.id}`,
+      });
+      // アプリ内通知にも追加
+      addNotification('🎯', `ミッション完了 +${m.xp} XP`, `「${m.title}」を提出しました`,
+        () => nav('missions', document.getElementById('nav-missions')));
+    }
+  })();
+
   // 新バッジがあれば少し遅らせて通知
   if(newBadges.length > 0){
-    setTimeout(()=>{
-      newBadges.forEach((b,i)=>{
+    setTimeout(async ()=>{
+      for(let i=0;i<newBadges.length;i++){
+        const b=newBadges[i];
         setTimeout(()=>showToast(`🏅 バッジ獲得：${b.emoji} ${b.name}！`), i*1500);
-      });
+        setTimeout(async ()=>{
+          await sendPushNotif({
+            title: `🏅 バッジ獲得！`,
+            body: `${b.emoji} ${b.name} を獲得しました！`,
+            tag: `badge-${b.id}`,
+          });
+          addNotification('🏅', `バッジ獲得：${b.emoji} ${b.name}`, 'おめでとうございます！',
+            () => nav('missions', document.getElementById('nav-missions')));
+        }, i*1500+200);
+      }
     }, 800);
   }
 }
@@ -3848,6 +3874,131 @@ function updateMatchingBadge(){
   }
 }
 
+// ═══════════ PUSH NOTIFICATION (Service Worker) ═══════════
+
+let _swReg = null; // ServiceWorkerRegistration キャッシュ
+
+/** Service Worker を登録する（初回のみ） */
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+    _swReg = reg;
+    return reg;
+  } catch (e) {
+    console.warn('[SW] 登録失敗:', e);
+    return null;
+  }
+}
+
+/** 通知権限をリクエストし、許可されたら true を返す */
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  const result = await Notification.requestPermission();
+  return result === 'granted';
+}
+
+/**
+ * Service Worker経由でローカル通知を表示する。
+ * SW未登録の場合は Notification API で直接表示。
+ */
+async function sendPushNotif({ title, body, tag = 'onboard', icon = '' }) {
+  if (Notification.permission !== 'granted') return;
+  const reg = _swReg || (await registerSW());
+  if (reg) {
+    // SW経由（バックグラウンドでも表示できる）
+    reg.active?.postMessage({ type: 'SHOW_NOTIFICATION', payload: { title, body, tag, icon } });
+  } else {
+    // フォールバック: Notification API 直接
+    new Notification(title, { body, tag, icon });
+  }
+}
+
+/** ログイン後にSupabase設定をSWへ送信（バックグラウンドポーリング用） */
+async function syncSWConfig(candidateId) {
+  if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) return;
+  // キャッシュに保存
+  try {
+    const cache = await caches.open('onboard-sw-v1');
+    await cache.put('/__sw_config__', new Response(JSON.stringify({
+      supabaseUrl: SUPABASE_URL,
+      supabaseKey: SUPABASE_KEY,
+      candidateId,
+    })));
+    // 初回スナップショット（既完了ミッションを「既知」として記録）
+    const prev = await cache.match('/__sw_prev_missions__');
+    if (!prev) {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/missions?candidate_id=eq.${candidateId}&done=eq.true&select=mission_id,xp`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      if (res.ok) {
+        const rows = await res.json();
+        await cache.put('/__sw_prev_missions__', new Response(JSON.stringify(rows)));
+      }
+    }
+  } catch (e) { console.warn('[SW] syncSWConfig error', e); }
+}
+
+/**
+ * アプリが開いている間、30秒おきにSupabaseをポーリングして
+ * 他ユーザーのミッション完了を管理者へ通知する（管理者向け機能）。
+ */
+let _adminPollTimer = null;
+function startAdminMissionPoll() {
+  if (_adminPollTimer) return; // 二重起動防止
+  _adminPollTimer = setInterval(async () => {
+    if (!isAdmin) return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/missions?done=eq.true&select=candidate_id,mission_id,xp`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      if (!res.ok) return;
+      const rows = await res.json();
+
+      // localStorageでスナップショット管理
+      const snapKey = 'onboard_admin_mission_snap';
+      const snap = JSON.parse(localStorage.getItem(snapKey) || '[]');
+      const snapSet = new Set(snap.map(r => `${r.candidate_id}_${r.mission_id}`));
+      const newRows = rows.filter(r => !snapSet.has(`${r.candidate_id}_${r.mission_id}`));
+
+      if (newRows.length > 0) {
+        // 内定者名を解決
+        const names = newRows.map(r => {
+          const c = candidates.find(x => String(x.id) === String(r.candidate_id));
+          return c ? c.name : '内定者';
+        });
+        const uniqueNames = [...new Set(names)];
+        const body = uniqueNames.length === 1
+          ? `${uniqueNames[0]} さんがミッションを完了しました`
+          : `${uniqueNames.slice(0, 2).join('、')} さんなど ${newRows.length} 件の進捗更新があります`;
+
+        await sendPushNotif({
+          title: '🎯 Onboard — 課題進捗更新',
+          body,
+          tag: 'admin-mission-update',
+        });
+        addNotification('🎯', '課題進捗が更新されました', body,
+          () => nav('admin-roadmap', document.getElementById('nav-admin-roadmap')));
+      }
+      localStorage.setItem(snapKey, JSON.stringify(rows));
+    } catch (e) { console.warn('[Poll] admin mission poll error', e); }
+  }, 30_000); // 30秒間隔
+}
+
+function stopAdminMissionPoll() {
+  if (_adminPollTimer) { clearInterval(_adminPollTimer); _adminPollTimer = null; }
+}
+
+// ─── 初期化：ページロード時にSW登録 ───
+(async () => {
+  await registerSW();
+})();
+
 // ═══════════ NOTIFICATIONS ═══════════
 let notifications = [];
 
@@ -4015,6 +4166,17 @@ function loginSuccess(candidate){
     }).catch(()=>{});
     setTimeout(showEmojiSetup, 300);
   }
+
+  // ── プッシュ通知 / Service Worker セットアップ ──
+  (async () => {
+    // 通知許可をリクエスト（初回のみダイアログ表示）
+    const granted = await requestNotifPermission();
+    if (granted) {
+      // SWへSupabase設定を送信（バックグラウンドポーリング用）
+      await syncSWConfig(candidate.id);
+      showToast('🔔 通知が有効になりました！ミッション完了時にお知らせします');
+    }
+  })();
 }
 
 // ═══════════ EMOJI SETUP ═══════════
@@ -4084,6 +4246,7 @@ async function saveEmoji(){
 
 function doLogout(){
   loggedInCandidate = null;
+  stopAdminMissionPoll(); // バックグラウンドポーリング停止
   document.getElementById('login-overlay').style.display = 'flex';
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
@@ -4127,6 +4290,15 @@ function goAdminMode(){
     topbarRight.insertBefore(btn, topbarRight.firstChild);
   }
   nav('dashboard', document.getElementById('nav-dashboard'));
+
+  // 管理者モード：通知権限を取得してポーリング開始
+  (async () => {
+    const granted = await requestNotifPermission();
+    if (granted) {
+      startAdminMissionPoll();
+      showToast('🔔 通知が有効です。内定者の進捗更新をお知らせします');
+    }
+  })();
 }
 
 function backToLogin(){

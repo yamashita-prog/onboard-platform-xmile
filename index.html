@@ -277,6 +277,7 @@ tbody tr:hover td{background:var(--s2)}
 .nc-action{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);padding:4px 8px;border-radius:99px;transition:all .15s;cursor:pointer}
 .nc-action:hover{background:rgba(26,127,191,.08);color:var(--accent)}
 .nc-action.liked{color:var(--red)}
+.news-card[data-article-id].drag-over{background:rgba(26,127,191,.08);border-top:2px solid var(--accent)}
 .nc-action.liked:hover{background:rgba(220,38,38,.08)}
 
 /* カテゴリバッジ */
@@ -2007,7 +2008,13 @@ function renderPressReleases(){
 }
 
 async function renderNews(){
-  const sorted=[...articles].sort((a,b)=>b.id-a.id);
+  const sorted=[...articles].sort((a,b)=>{
+    // sort_orderが設定されていればそれを優先、なければid降順
+    const ao = a.sort_order ?? 99999;
+    const bo = b.sort_order ?? 99999;
+    if(ao !== bo) return ao - bo;
+    return b.id - a.id;
+  });
 
   // カウントラベル
   const countEl = document.getElementById('news-count-label');
@@ -3285,7 +3292,12 @@ function renderSettings(){
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteSetting('schedule',${s.id})">🗑</button>
     </td>
   </tr>`).join('');
-  const sortedArticles=[...articles].sort((a,b)=>b.id-a.id);
+  const sortedArticles=[...articles].sort((a,b)=>{
+    const ao = a.sort_order ?? 99999;
+    const bo = b.sort_order ?? 99999;
+    if(ao !== bo) return ao - bo;
+    return b.id - a.id;
+  });
   const settingsFeed = document.getElementById('settings-news-feed');
   if(settingsFeed){
     if(sortedArticles.length === 0){
@@ -3294,14 +3306,81 @@ function renderSettings(){
         <div style="font-size:13px">まだ記事がありません</div>
       </div>`;
     } else {
-      settingsFeed.innerHTML = sortedArticles.map(a => renderSettingsNewsCard(a)).join('');
+      settingsFeed.innerHTML = `
+        <div style="font-size:11px;color:var(--text3);padding:10px 16px 4px;display:flex;align-items:center;gap:6px">
+          <span>⠿</span><span>ドラッグして並び替えができます</span>
+        </div>` +
+        sortedArticles.map(a => renderSettingsNewsCard(a)).join('');
       settingsFeed.querySelectorAll('img[data-settings-img]').forEach(img => {
         const id = Number(img.getAttribute('data-settings-img'));
         const art = articles.find(x=>x.id===id);
         if(art && art.image) img.src = art.image;
       });
+      // ドラッグ&ドロップ初期化
+      initNewsDragSort(settingsFeed);
     }
   }
+}
+
+// ── ドラッグ&ドロップ並び替え ──
+let _dragSrc = null;
+
+function initNewsDragSort(container){
+  container.querySelectorAll('.news-card[data-article-id]').forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.style.cursor = 'grab';
+    card.addEventListener('dragstart', e => {
+      _dragSrc = card;
+      card.style.opacity = '.5';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '1';
+      container.querySelectorAll('.news-card[data-article-id]').forEach(c => c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if(card !== _dragSrc) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', async e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if(!_dragSrc || _dragSrc === card) return;
+
+      // DOM上の順序を入れ替え
+      const cards = [...container.querySelectorAll('.news-card[data-article-id]')];
+      const srcIdx = cards.indexOf(_dragSrc);
+      const dstIdx = cards.indexOf(card);
+      if(srcIdx < dstIdx) card.after(_dragSrc);
+      else card.before(_dragSrc);
+
+      // articles配列のsort_orderを更新
+      const newOrder = [...container.querySelectorAll('.news-card[data-article-id]')];
+      newOrder.forEach((c, i) => {
+        const id = Number(c.getAttribute('data-article-id'));
+        const a = articles.find(x => x.id === id);
+        if(a) a.sort_order = i;
+      });
+
+      // Supabaseへ一括保存
+      await Promise.all(articles.map(a =>
+        fetch(`${SUPABASE_URL}/rest/v1/articles?id=eq.${a.id}`, {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ sort_order: a.sort_order ?? 99999 })
+        })
+      ));
+      showToast('✅ 並び順を保存しました');
+      renderNews().catch(()=>{});
+    });
+  });
 }
 
 // 設定ページ用ニュースカード（編集・削除ボタン常時表示）
@@ -3313,7 +3392,8 @@ function renderSettingsNewsCard(a){
   const mediaHtml = a.image
     ? `<div class="nc-image" style="background:var(--s3)"><img data-settings-img="${a.id}" alt="${a.title}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'"></div>`
     : a.emoji ? `<div class="nc-image has-emoji">${a.emoji}</div>` : '';
-  return `<div class="news-card">
+  return `<div class="news-card" data-article-id="${a.id}">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 4px 0 0;color:var(--text3);font-size:16px;cursor:grab;flex-shrink:0" title="ドラッグして並び替え">⠿</div>
     <div class="nc-avatar" style="background:linear-gradient(135deg,${color},${color}aa)">${initial}</div>
     <div class="nc-body">
       <div class="nc-header">

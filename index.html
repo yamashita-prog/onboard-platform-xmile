@@ -3105,19 +3105,45 @@ let gcalSlots = {};
 let loadingSlots = false;
 
 // Google OAuth ログイン
+let _googleTokenClient = null;
+
 function googleSignIn(callback) {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: GOOGLE_SCOPES,
-    callback: (resp) => {
-      if (resp.access_token) {
-        googleAccessToken = resp.access_token;
-        if (callback) callback();
-      }
-    },
-  });
-  client.requestAccessToken();
+  if (!_googleTokenClient) {
+    _googleTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: GOOGLE_SCOPES,
+      callback: (resp) => {
+        if (resp.access_token) {
+          googleAccessToken = resp.access_token;
+          // セッションストレージに保存（リロード後も短時間保持）
+          const expiry = Date.now() + 55 * 60 * 1000; // 55分
+          sessionStorage.setItem('gcal_token', resp.access_token);
+          sessionStorage.setItem('gcal_token_expiry', String(expiry));
+          if (_gcalCallback) { _gcalCallback(); _gcalCallback = null; }
+        }
+      },
+    });
+  }
+  _gcalCallback = callback;
+  // promptなしで自動取得を試みる（初回のみポップアップ）
+  _googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? 'none' : '' });
 }
+
+let _gcalCallback = null;
+
+// ページロード時にセッションのトークンを復元
+function restoreGoogleToken() {
+  const token = sessionStorage.getItem('gcal_token');
+  const expiry = Number(sessionStorage.getItem('gcal_token_expiry') || 0);
+  if (token && Date.now() < expiry) {
+    googleAccessToken = token;
+    return true;
+  }
+  return false;
+}
+
+// 初期化時に復元
+restoreGoogleToken();
 
 async function fetchAvailability(recruiter, date) {
   const key = dk(date);

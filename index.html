@@ -2030,8 +2030,22 @@ async function renderNews(){
         ${isAdmin?'<div style="font-size:12px;margin-top:4px">「+ 記事を追加」から投稿しましょう</div>':''}
       </div>`;
     } else {
-      feed.innerHTML = sorted.map(a => renderNewsCard(a)).join('');
-      // base64画像をdata属性経由でセット（テンプレート文字列破損を回避）
+      const INIT_COUNT = 5;
+      let showCount = Number(feed.dataset.showCount) || INIT_COUNT;
+      const visible = sorted.slice(0, showCount);
+      const hasMore = sorted.length > showCount;
+
+      feed.innerHTML = visible.map(a => renderNewsCard(a)).join('') +
+        (hasMore ? `
+          <div id="news-load-more" style="text-align:center;padding:20px 0">
+            <button onclick="newsLoadMore()" class="btn btn-ghost" style="width:100%;max-width:280px;padding:10px;font-size:13px;font-weight:600">
+              📰 もっと見る（残り${sorted.length - showCount}件）
+            </button>
+          </div>` : `
+          <div style="text-align:center;padding:16px 0;font-size:11px;color:var(--text3)">
+            すべての記事を表示しました（${sorted.length}件）
+          </div>`);
+
       feed.querySelectorAll('img[data-article-img]').forEach(img => {
         const id = Number(img.getAttribute('data-article-img'));
         const art = articles.find(x=>x.id===id);
@@ -2050,6 +2064,14 @@ async function renderNews(){
   renderPressReleases();
   await fetchPressReleases();
   renderPressReleases();
+}
+
+function newsLoadMore(){
+  const feed = document.getElementById('news-feed');
+  if(!feed) return;
+  const current = Number(feed.dataset.showCount) || 5;
+  feed.dataset.showCount = current + 5;
+  renderNews().catch(()=>{});
 }
 
 function renderNewsCard(a){

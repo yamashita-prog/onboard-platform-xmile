@@ -152,10 +152,10 @@ tbody tr:hover td{background:var(--s2)}
 .xp-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'Outfit',sans-serif}
 
 /* ── ROADMAP ── */
-.roadmap-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.05);overflow:hidden}
-.roadmap-title{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.roadmap-scale-wrap{width:100%;overflow:hidden}
-.roadmap-scale-inner{transform-origin:top left;width:500px}
+.roadmap-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.05);overflow-x:auto}
+.roadmap-title{font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.roadmap-scale-wrap{width:100%}
+.roadmap-scale-inner{width:100%}
 .roadmap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;min-width:500px}
 .roadmap-row{display:contents}
 .rm-cell{display:flex;justify-content:center;align-items:flex-start;padding:6px 4px;position:relative;min-height:110px}
@@ -2481,8 +2481,8 @@ function renderRoadmap(){
   }).join('') : '';
 
   board.innerHTML = `
-    <div style="overflow:visible">
-      <svg viewBox="0 0 ${W} ${SVG_H}" width="100%" style="overflow:visible">
+    <div style="overflow:visible;padding-top:20px">
+      <svg viewBox="-10 -20 ${W+20} ${SVG_H+30}" width="100%" style="overflow:visible">
         <defs>
           <marker id="rm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>

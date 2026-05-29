@@ -2000,7 +2000,16 @@ async function fetchPressReleases(){
   }
 
   if(!xml){
-    // 全プロキシ失敗時はPRtimesへのリンクだけ表示
+    // 全プロキシ失敗時はSupabase Edge Function経由で取得を試みる
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/fetch-press-releases`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      if(res.ok){
+        const data = await res.json();
+        if(data.items?.length > 0){ pressReleases = data.items; return; }
+      }
+    } catch(e){}
     pressReleases = [{
       title: 'X Mile株式会社のプレスリリース一覧',
       link: 'https://prtimes.jp/main/html/searchrlp/company_id/63503',

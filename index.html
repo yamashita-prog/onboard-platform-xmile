@@ -2803,7 +2803,8 @@ function openMission(id){
           ${m.submittedFileUrl?`<a href="${m.submittedFileUrl}" target="_blank" style="font-size:11px;color:var(--accent);display:inline-flex;align-items:center;gap:3px;margin-top:4px">🔗 提出ファイルを確認</a>`:''}
         </div>
       </div>
-      <button class="btn btn-ghost" style="width:100%" disabled>✅ 完了済み</button>`;
+      <button class="btn btn-ghost" style="width:100%;color:var(--green);border-color:rgba(5,150,105,.3)" disabled>✓ 提出済み</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px;font-size:12px;color:var(--text3)" onclick="cancelMission(${m.id})">↩ 提出を取り消して再提出する</button>`;
   } else {
     const isImage = m.submitType==='image';
     const isCheck = m.submitType==='check';
@@ -2951,6 +2952,41 @@ async function uploadMissionFile(candidateId, missionId, file){
     // 公開URLを返す
     return `${SUPABASE_URL}/storage/v1/object/public/mission-files/${path}`;
   } catch(e){ console.warn('[Storage] upload error', e); return null; }
+}
+
+async function cancelMission(id){
+  const m = missions.find(x => x.id === id);
+  if(!m || !m.done) return;
+  if(!confirm(`「${m.title}」の提出を取り消しますか？`)) return;
+
+  // XP を戻す
+  xp -= Number(m.xp) || 0;
+
+  // ローカル状態をリセット
+  m.done = false;
+  m.submittedFile = null;
+  m.submittedFileUrl = null;
+  m._pendingFile = null;
+  m._pendingFileObj = null;
+
+  // Supabase を更新
+  if(loggedInCandidate){
+    if(missionProgress[loggedInCandidate.id])
+      missionProgress[loggedInCandidate.id][m.id] = { done: false, xp: 0 };
+    await dbUpsert('missions', {
+      candidate_id: loggedInCandidate.id,
+      mission_id: m.id,
+      done: false,
+      submitted_file: null,
+      submitted_file_url: null,
+      xp: 0,
+      deadline: missionProgress[loggedInCandidate.id]?.[m.id]?.deadline || null,
+    });
+  }
+
+  closeMissionModal();
+  renderMissions();
+  showToast('↩ 提出を取り消しました。再提出できます');
 }
 
 async function completeMission(id){

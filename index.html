@@ -1965,33 +1965,64 @@ function relTime(dateStr){
 }
 
 async function fetchPressReleases(){
+  // キャッシュがあれば使う（5分間）
+  const cacheKey = 'pr_cache';
+  const cacheTimeKey = 'pr_cache_time';
+  const cached = sessionStorage.getItem(cacheKey);
+  const cachedTime = Number(sessionStorage.getItem(cacheTimeKey)||0);
+  if(cached && Date.now() - cachedTime < 5 * 60 * 1000){
+    try{ pressReleases = JSON.parse(cached); return; } catch(e){}
+  }
+
+  const RSS_URL = 'https://prtimes.jp/companyrdf.php?company_id=63503';
+  // 複数プロキシを並列で試す
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
+    `https://thingproxy.freeboard.io/fetch/${RSS_URL}`,
+  ];
+
+  let xml = null;
+  for(const proxy of proxies){
+    try{
+      const res = await Promise.race([
+        fetch(proxy),
+        new Promise((_,rej) => setTimeout(()=>rej(new Error('timeout')), 5000))
+      ]);
+      if(!res.ok) continue;
+      let text = '';
+      if(proxy.includes('allorigins')){ const data = await res.json(); text = data.contents; }
+      else { text = await res.text(); }
+      const parser = new DOMParser();
+      const parsed = parser.parseFromString(text, 'text/xml');
+      if(parsed.querySelector('item')){ xml = parsed; break; }
+    } catch(e){ continue; }
+  }
+
+  if(!xml){
+    // 全プロキシ失敗時はPRtimesへのリンクだけ表示
+    pressReleases = [{
+      title: 'X Mile株式会社のプレスリリース一覧',
+      link: 'https://prtimes.jp/main/html/searchrlp/company_id/63503',
+      date: '',
+      desc: 'PRtimesで最新情報を確認できます'
+    }];
+    return;
+  }
+
+  const items = xml.querySelectorAll('item');
+  pressReleases = Array.from(items).slice(0,3).map(item=>({
+    title: item.querySelector('title')?.textContent || '',
+    link: item.querySelector('link')?.textContent || '',
+    date: item.querySelector('pubDate')?.textContent || '',
+    desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').slice(0,100)+'...' || '',
+  }));
+
+  // キャッシュ保存
   try{
-    const RSS_URL = 'https://prtimes.jp/companyrdf.php?company_id=63503';
-    const proxies = [
-      `https://corsproxy.io/?${encodeURIComponent(RSS_URL)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`,
-    ];
-    let xml = null;
-    for(const proxy of proxies){
-      try{
-        const res = await fetch(proxy);
-        let text = '';
-        if(proxy.includes('allorigins')){ const data = await res.json(); text = data.contents; }
-        else { text = await res.text(); }
-        const parser = new DOMParser();
-        xml = parser.parseFromString(text, 'text/xml');
-        if(xml.querySelector('item')) break;
-      } catch(e){ continue; }
-    }
-    if(!xml) throw new Error('all proxies failed');
-    const items = xml.querySelectorAll('item');
-    pressReleases = Array.from(items).slice(0,3).map(item=>({
-      title: item.querySelector('title')?.textContent || '',
-      link: item.querySelector('link')?.textContent || '',
-      date: item.querySelector('pubDate')?.textContent || '',
-      desc: item.querySelector('description')?.textContent?.replace(/<[^>]*>/g,'').slice(0,100)+'...' || '',
-    }));
-  } catch(e){ console.warn('PR fetch error', e); pressReleases = [{title:'プレスリリースを取得できませんでした', link:'https://prtimes.jp/main/html/searchrlp/company_id/63503', date:'', desc:''}]; }
+    sessionStorage.setItem(cacheKey, JSON.stringify(pressReleases));
+    sessionStorage.setItem(cacheTimeKey, String(Date.now()));
+  } catch(e){}
 }
 
 function renderPressReleases(){

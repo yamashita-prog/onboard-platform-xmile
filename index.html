@@ -698,6 +698,7 @@ tbody tr:hover td{background:var(--s2)}
 }
 
 </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -3082,32 +3083,82 @@ function checkBadges(){
 function closeMissionModal(e){if(!e||e.target===document.getElementById('mission-modal'))document.getElementById('mission-modal').classList.remove('open')}
 
 // ═══════════ SCHEDULE BOOKING ═══════════
+// ── Google Calendar API 設定 ──
+const GOOGLE_CLIENT_ID = '50754780423-m7vtedgacl7i7qrt4mg8o9v7t9112e2j.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events';
+let googleAccessToken = null;
 let gcalSlots = {};
 let loadingSlots = false;
+
+// Google OAuth ログイン
+function googleSignIn(callback) {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: (resp) => {
+      if (resp.access_token) {
+        googleAccessToken = resp.access_token;
+        if (callback) callback();
+      }
+    },
+  });
+  client.requestAccessToken();
+}
 
 async function fetchAvailability(recruiter, date) {
   const key = dk(date);
   if (gcalSlots[key] !== undefined) return;
   loadingSlots = true;
   renderSchedStep();
+
   try {
+    if (!googleAccessToken) {
+      googleSignIn(() => fetchAvailability(recruiter, date));
+      loadingSlots = false;
+      return;
+    }
+
     const timeMin = new Date(date);
     timeMin.setHours(9, 0, 0, 0);
     const timeMax = new Date(date);
     timeMax.setHours(18, 0, 0, 0);
-    const prompt = `Google CalendarでユーザーのカレンダーIDはprimaryです。${timeMin.toISOString()}から${timeMax.toISOString()}の間の予定を取得してください。取得した予定をもとに、9:00〜17:00の間で30分刻みの時間枠のうち、予定が入っていない空き時間を特定してください。以下のJSON形式のみで返答してください（前置き・説明不要）:{"slots":[{"time":"09:00","available":true},...]}`;
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+
+    const res = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({model: 'claude-sonnet-4-20250514',max_tokens: 1000,mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],messages: [{ role: 'user', content: prompt }]})
+      headers: {
+        'Authorization': 'Bearer ' + googleAccessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        items: [{ id: recruiter.calendarId || 'primary' }],
+      }),
     });
+
+    if (!res.ok) throw new Error('FreeBusy API failed');
     const data = await res.json();
-    const textBlock = data.content?.find(b => b.type === 'text');
-    const text = textBlock?.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    gcalSlots[key] = parsed.slots;
+    const busy = data.calendars?.primary?.busy || [];
+
+    const allSlots = [];
+    for (let h = 9; h < 17; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const time = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+        const slotStart = new Date(date);
+        slotStart.setHours(h, m, 0, 0);
+        const slotEnd = new Date(slotStart);
+        slotEnd.setMinutes(slotEnd.getMinutes() + 30);
+        const isBusy = busy.some(b => {
+          const bs = new Date(b.start);
+          const be = new Date(b.end);
+          return slotStart < be && slotEnd > bs;
+        });
+        allSlots.push({ time, available: !isBusy });
+      }
+    }
+    gcalSlots[key] = allSlots;
   } catch(e) {
+    console.warn('gcal error:', e);
     const base = ['09:00','09:30','10:00','10:30','11:00','11:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30'];
     gcalSlots[key] = base.map(t => ({ time: t, available: true }));
   }
@@ -3117,18 +3168,27 @@ async function fetchAvailability(recruiter, date) {
 
 async function submitToCalendar(recruiter, date, slot, type) {
   try {
+    if (!googleAccessToken) return;
     const startDt = new Date(date);
     const [h, m] = slot.split(':').map(Number);
     startDt.setHours(h, m, 0, 0);
     const endDt = new Date(startDt);
     endDt.setMinutes(endDt.getMinutes() + (type.dur === '60分' ? 60 : type.dur === '45分' ? 45 : 30));
-    const prompt = `Google Calendarのプライマリカレンダーに以下の予定を追加してください：タイトル：「${type.name} - ${recruiter.name}」開始：${startDt.toISOString()}終了：${endDt.toISOString()}予定を作成したら「作成完了」とだけ答えてください。`;
-    await fetch('https://api.anthropic.com/v1/messages', {
+    await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({model: 'claude-sonnet-4-20250514',max_tokens: 200,mcp_servers: [{ type: 'url', url: 'https://calendarmcp.googleapis.com/mcp/v1', name: 'google-calendar' }],messages: [{ role: 'user', content: prompt }]})
+      headers: {
+        'Authorization': 'Bearer ' + googleAccessToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: type.name + ' - ' + recruiter.name,
+        start: { dateTime: startDt.toISOString(), timeZone: 'Asia/Tokyo' },
+        end: { dateTime: endDt.toISOString(), timeZone: 'Asia/Tokyo' },
+        attendees: [{ email: recruiter.email }],
+        description: 'Onboardで予約された面談です。\n内定者：' + (loggedInCandidate?.name || '') + '\n種別：' + type.name,
+      }),
     });
-  } catch(e) { console.log('Calendar registration failed:', e); }
+  } catch(e) { console.warn('Calendar registration failed:', e); }
 }
 
 function renderSchedStep(){
@@ -3173,6 +3233,22 @@ function renderSchedStep(){
       days+=`<div class="cal-day ${isPast?'cal-past':''} ${isTod?'cal-today':''} ${isSel?'cal-sel':''} ${hasS?'cal-has':''}" onclick="${clickable?'sBookPickDate('+year+','+month+','+d+')':''}">${d}</div>`;
     }
     let slotsHtml='';
+    // Googleログインボタン
+    const gcalLoginBtn = !googleAccessToken ? `
+      <div style="background:rgba(26,127,191,.06);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:20px">📅</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;margin-bottom:2px">Googleカレンダーと連携する</div>
+          <div style="font-size:11px;color:var(--text3)">担当者の空き時間をリアルタイムで確認できます</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="googleSignIn(()=>{ if(sBook.rec && sBook.date) fetchAvailability(recruiters.find(r=>r.id===sBook.rec), sBook.date); renderSchedStep(); })" style="white-space:nowrap;font-size:12px">
+          Googleでログイン
+        </button>
+      </div>` : `
+      <div style="font-size:11px;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:4px">
+        ✅ Googleカレンダー連携済み
+      </div>`;
+
     if(sBook.date){
       const key=dk(sBook.date);
       const dow=dows[sBook.date.getDay()];
@@ -3194,6 +3270,7 @@ function renderSchedStep(){
       }
     }
     body.innerHTML=`
+    ${gcalLoginBtn}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <button class="btn btn-ghost btn-sm" onclick="changeCalMonth(-1)">‹</button>
       <span style="font-size:13px;font-weight:600">${year}年 ${mn[month]}</span>

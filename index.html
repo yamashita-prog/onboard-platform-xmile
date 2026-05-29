@@ -2481,8 +2481,8 @@ function renderRoadmap(){
   }).join('') : '';
 
   board.innerHTML = `
-    <div style="padding-top:20px">
-      <svg viewBox="-10 -20 ${W+20} ${SVG_H+40}" width="100%" style="display:block">
+    <div style="padding-top:32px">
+      <svg viewBox="-10 -40 ${W+20} ${SVG_H+60}" width="100%" style="display:block">
         <defs>
           <marker id="rm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>
@@ -2651,8 +2651,8 @@ function renderAdminRoadmap(){
   }).join('');
 
   board.innerHTML = `
-    <div style="overflow-x:auto;overflow-y:visible;margin-bottom:24px">
-      <svg viewBox="0 0 ${W} ${SVG_H}" width="100%" style="min-width:500px;overflow:visible">
+    <div style="padding-top:32px;margin-bottom:24px">
+      <svg viewBox="-10 -40 ${W+20} ${SVG_H+60}" width="100%" style="display:block">
         <defs>
           <marker id="adm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
             <polygon points="0 0, 8 3, 0 6" fill="#b0d4e8"/>

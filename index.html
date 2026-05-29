@@ -152,18 +152,18 @@ tbody tr:hover td{background:var(--s2)}
 .xp-chip{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--amber);font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;font-family:'Outfit',sans-serif}
 
 /* ── ROADMAP ── */
-.roadmap-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.05);overflow-x:auto}
-.roadmap-title{font-size:13px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.roadmap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;min-width:500px}
+.roadmap-wrap{background:var(--s1);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,80,140,.05);overflow-x:auto;max-height:320px;overflow-y:auto}
+.roadmap-title{font-size:12px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.roadmap-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:0;position:relative;min-width:400px}
 .roadmap-row{display:contents}
-.rm-cell{display:flex;justify-content:center;align-items:flex-start;padding:6px 4px;position:relative;min-height:110px}
+.rm-cell{display:flex;justify-content:center;align-items:flex-start;padding:4px 2px;position:relative;min-height:80px}
 .rm-cell.empty{pointer-events:none}
 /* 道のライン */
 .rm-cell::before{content:'';position:absolute;background:var(--border);z-index:0}
 .rm-cell.path-right::after{content:'';position:absolute;right:-8px;top:50%;transform:translateY(-50%);width:16px;height:4px;background:var(--border2);z-index:1;border-radius:99px}
 .rm-cell.path-down::after{content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:4px;height:16px;background:var(--border2);z-index:1;border-radius:99px}
 /* マス */
-.rm-square{position:relative;width:80px;flex-shrink:0;z-index:2;cursor:pointer;transition:transform .15s}
+.rm-square{position:relative;width:62px;flex-shrink:0;z-index:2;cursor:pointer;transition:transform .15s}
 .rm-square:hover{transform:scale(1.05)}
 .rm-square-inner{
   width:80px;height:80px;border-radius:14px;
@@ -177,13 +177,13 @@ tbody tr:hover td{background:var(--s2)}
 .rm-square.current .rm-square-inner{background:rgba(26,127,191,.1);border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,127,191,.2)}
 .rm-square.start .rm-square-inner{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));border-color:var(--amber)}
 .rm-square.goal .rm-square-inner{background:linear-gradient(135deg,rgba(219,39,119,.15),rgba(219,39,119,.05));border-color:var(--pink)}
-.rm-sq-icon{font-size:22px;line-height:1}
-.rm-sq-label{font-size:9px;font-weight:700;color:var(--text2);text-align:center;padding:0 4px;line-height:1.3;max-width:72px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rm-sq-icon{font-size:17px;line-height:1}
+.rm-sq-label{font-size:8px;font-weight:700;color:var(--text2);text-align:center;padding:0 2px;line-height:1.3;max-width:58px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .rm-sq-xp{font-size:8px;font-weight:700;color:var(--amber);font-family:'Outfit',sans-serif}
 .rm-sq-done-badge{position:absolute;top:4px;right:4px;background:var(--green);color:#fff;font-size:8px;font-weight:700;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 /* 駒エリア */
 .rm-pieces{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:4px;min-height:22px}
-.rm-piece{font-size:18px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2));transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.rm-piece{font-size:14px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2));transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
 .rm-piece.me{animation:piecePop .4s cubic-bezier(.34,1.56,.64,1)}
 @keyframes piecePop{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
 /* コネクタ矢印 */
@@ -911,10 +911,6 @@ tbody tr:hover td{background:var(--s2)}
       <div class="card">
         <div class="card-head"><h2>🏅 バッジ</h2></div>
         <div style="padding:14px"><div class="badge-grid" id="badge-grid"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-head"><h2>🏆 ランキング</h2></div>
-        <div style="padding:12px"><div class="rank-list" id="rank-list"></div></div>
       </div>
     </div>
   </div>
